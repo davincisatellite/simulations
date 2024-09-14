@@ -1,0 +1,25 @@
+label,value,units,description
+name,DVS,-, name of the sat that will be simulated
+
+
+mass, 2.5, kg, mass of davinci satellite
+Ixx, 0.00952, kg.m2, mass moment of ineteria about x axis 
+Iyy, 0.03105, kg.m2, mass moment of ineteria about y axis 
+Izz, 0.0126, kg.m2, mass moment of ineteria about z axis
+
+Aref, 0.01, m2, area of z face of satellite
+lref, 0.2, m, length of cubesat
+
+x_cg_body, 0.02, m, x position of cg (wrt body centred frame)
+y_cg_body, -0.02, m, x position of cg (wrt body centred frame)
+z_cg_body, 0.02, m, x position of cg (wrt body centred frame)
+
+A_0, 0.022422, m2, surface area of panel 0 (x+)
+A_1, 0.022422, m2, surface area of panel 1 (y+)
+A_2, 0.010201, m2, surface area of panel 2 (z+)
+A_3, 0.022422, m2, surface area of panel 3 (x-)
+A_4, 0.022422, m2, surface area of panel 4 (y-)
+A_5, 0.010201, m2, surface area of panel 5 (z-)
+
+T_sat_min, 263, K, min temperature of exterior panesl of DVS
+T_sat_max, 333, K, max temperature of exterior panels of DVS

@@ -1,0 +1,17 @@
+label,value,units,description
+year_of_sim_start,2025,-,year of start of mission
+month_of_sim_start,02,-,month of start of mission
+day_of_sim_start,01,-,day of start of mission
+hour_of_sim_start,0,-,hour of start of mission
+minute_of_sim_start,0,-,minute of start of mission
+second_of_sim_start,0,-,second of start of mission
+
+
+semi_major_axis,7000,km, -
+inclination,98,degrees, +- 1 degree acording to ISISpace email from ISISpace on the 13/03/2023
+RAAN,0,degrees, -
+eccentricity,0.01, -, -
+argument_of_periapsis, 0, degrees, -
+true_anomaly, 0, degrees, -
+
+
