@@ -3,9 +3,9 @@ name,DVS,-, name of the sat that will be simulated
 
 
 mass, 2.5, kg, mass of davinci satellite
-Ixx, 0.00969, kg.m2, mass moment of ineteria about x axis - rough estimate on 20.03.2023 - needs to be updated!
-Iyy, 0.03079, kg.m2, mass moment of ineteria about y axis - rough estimate on 20.03.2023 - needs to be updated!
-Izz, 0.01288, kg.m2, mass moment of ineteria about z axis - rough estimate on 20.03.2023 - needs to be updated!
+Ixx, 0.00952, kg.m2, mass moment of ineteria about x axis 
+Iyy, 0.03105, kg.m2, mass moment of ineteria about y axis 
+Izz, 0.0126, kg.m2, mass moment of ineteria about z axis
 
 Aref, 0.01, m2, area of z face of satellite
 lref, 0.2, m, length of cubesat

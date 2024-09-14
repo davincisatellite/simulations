@@ -1,6 +1,6 @@
 label,value,units,description
-year_of_sim_start,2021,-,year of start of mission
-month_of_sim_start,01,-,month of start of mission
+year_of_sim_start,2025,-,year of start of mission
+month_of_sim_start,02,-,month of start of mission
 day_of_sim_start,01,-,day of start of mission
 hour_of_sim_start,0,-,hour of start of mission
 minute_of_sim_start,0,-,minute of start of mission
