@@ -1,0 +1,15 @@
+(0, 3): Total acceleration in inertial frame of DVS
+(3, 6): Kepler elements of DVS w.r.t. Earth
+(9, 1): Spherical position angle latitude angle of DVS w.r.t. Earth
+(10, 1): Spherical position angle longitude angle of DVS w.r.t. Earth
+(11, 9): TNW to inertial frame rotation matrix of DVS w.r.t. Earth
+(20, 3): Total torque in body-fixed frame of DVS
+(23, 9): Rotation matrix to body-fixed frame of DVS
+(32, 1): Velocity orientation angle  heading angle of DVS w.r.t. Earth
+(33, 1): Velocity orientation angle  flight path angle of DVS w.r.t. Earth
+(34, 1): Aerodynamic body orientation angle angle of attack of DVS w.r.t. Earth
+(35, 1): Aerodynamic body orientation angle sideslip angle of DVS w.r.t. Earth
+(36, 1): Aerodynamic body orientation angle bank angle of DVS w.r.t. Earth
+(37, 3): Custom dependent variable of 
+(40, 3): Custom dependent variable of 
+(43, 3): Custom dependent variable of 
