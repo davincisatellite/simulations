@@ -1,6 +1,6 @@
 import numpy as np
 
-def rotation_x(angle):
+def rotationX(angle):
     """
     Returns the rotation matrix around the x-axis with a given angle.
     - angle: rotation angle around x-axis, following right-hand rule. [º]
@@ -12,7 +12,7 @@ def rotation_x(angle):
          [0, -np.sin(angle), np.cos(angle)]]
     )
 
-def rotation_y(angle):
+def rotationY(angle):
     """
     Returns the rotation matrix around the y-axis with a given angle.
     - angle: rotation angle around y-axis, following right-hand rule. [º]
@@ -24,7 +24,7 @@ def rotation_y(angle):
          [np.sin(angle), 0, np.cos(angle)]]
     )
 
-def rotation_z(angle):
+def rotationZ(angle):
     """
     Returns the rotation matrix around the z-axis with a given angle.
     - angle: rotation angle around z-axis, following right-hand rule. [º]
