@@ -21,7 +21,9 @@ def posVectorPlanar(theta, semi_maj, ecc):
     pos_mag = orbitRad(theta=theta, semi_maj=semi_maj, ecc=ecc)
 
     pos_vector = np.array(
-        [pos_mag * np.cos(theta *  np.pi/180), pos_mag * np.sin(theta * np.pi/180), 0]
+        [pos_mag * np.cos(theta *  np.pi/180), 
+         pos_mag * np.sin(theta * np.pi/180), 
+         np.zeros(np.size(theta))]
     )
 
     return pos_vector
@@ -61,23 +63,3 @@ def eclypseCheck(pos_3d, r_planet):
     else:
         return False
 
-
-""" 
-Verification code. Remove at some point.
-
-ver_a = 50000
-ver_ecc = 0.05
-ver_theta = 90
-ver_inc = 0
-ver_decl = 0
-ver_ras = 90
-ver_arg = 0
-ver_radius = 20000
-
-pos_vector_2d = posVectorPlanar(theta= ver_theta, semi_maj= ver_a, ecc= ver_ecc)
-print(pos_vector_2d)
-
-pos_vector_3d = posVector3D(pos_vector_planar= pos_vector_2d, pe_arg= ver_arg, inclination= ver_inc, right_ascention= ver_ras, sol_dec= ver_decl)
-print(pos_vector_3d)
-
-print(f"The spacecraft is eclypsed:{eclypseCheck(pos_vector_3d, ver_radius)}") """
