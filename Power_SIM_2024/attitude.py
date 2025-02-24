@@ -1,7 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
+import math
 
-from numpy import sin, cos
+from numpy import sin, cos, max, min
 
 def get_quaternion(rot_vec, angle):
     """
@@ -49,20 +49,26 @@ def quaternion_rotation(point, quaternion):
     - point: 3-element array of rotated point coords.
     - quaternion: 4-element array of quaternion elements. As defined in 
     get_quaternion().
+    Output:
+    - rotated_pt: Returns the cartesian position of the rotated point.
     """
     p_1 = np.append(0, point)
-    print(f"Point 1 in quaternion form: {p_1}")
 
-    q_inv = np.append(quaternion[0], -quaternion[1:])
-    print(quaternion, q_inv)
+    # Check if no rotation is applied.
+    if quaternion[0] == 1.0:
+        rotated_pt = p_1
+    else:
+        # Creates inverted rotation quaternion
+        q_inv = np.append(quaternion[0], -quaternion[1:])
 
-    s_1 = quaternion_multiplication(q_inv, p_1)
-    rotated_pt = quaternion_multiplication(s_1, quaternion)
+        # Rotates the point quaternion
+        s_1 = quaternion_multiplication(q_inv, p_1)
+        rotated_pt = quaternion_multiplication(s_1, quaternion)
 
-    return rotated_pt
+    return rotated_pt[1:]
 
 
-def fibonacci_sphere(points=100):
+def fibonacci_sphere(samples=1000):
     """
     Creates evenly spaced out points in a radius 1 sphere. 
     Copied from https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
@@ -72,29 +78,44 @@ def fibonacci_sphere(points=100):
     - points: 
     """
     points = []
-    phi = np.pi * (np.sqrt(5.) - 1.)  # golden angle in radians
+    phi = math.pi * (math.sqrt(5.) - 1.)  # golden angle in radians
 
-    for i in range(points):
-        y = 1 - (i / float(points - 1)) * 2  # y goes from 1 to -1
-        radius = np.sqrt(1 - y * y)  # radius at y
+    for i in range(samples):
+        y = 1 - (i / float(samples - 1)) * 2  # y goes from 1 to -1
+        radius = math.sqrt(1 - y * y)  # radius at y
 
         theta = phi * i  # golden angle increment
 
-        x = np.cos(theta) * radius
-        z = np.sin(theta) * radius
+        x = math.cos(theta) * radius
+        z = math.sin(theta) * radius
 
         points.append((x, y, z))
 
     return points
 
-p = np.array([1,0,0])
-rot_vec = np.array([0,0,1])
-rot_ang = 45 * (np.pi/180)
 
-q = get_quaternion(rot_vec, rot_ang)
+def power_output(orient, solar_arr):
+    """
+    Retrieves power production depending on satellite orientation. Considers
+    an external reference frame where X-axis is sun-pointing. Assumes direct
+    correlation between cosine of incidence and power production.
+    Inputs:
+    - orient: 3x3 array of satellite orientation within the out-of-vehicle
+    frame.
+    - solar_arr: 6-element array of the solar panel power production.
+    """
+    # Extracts X-component (Sun-facing) of each satellite attitude axis.
+    Dx_x = orient[0,0]
+    Dy_x = orient[1,0]
+    Dz_x = orient[2,0]
 
-p_2 = quaternion_rotation(p, q)
+    # Calculates power production in each of satellite's axes.
+    Px = solar_arr[0]*max([Dx_x, 0]) + solar_arr[1]*np.abs(min([Dx_x, 0]))
+    Py = solar_arr[2]*max([Dy_x, 0]) + solar_arr[3]*np.abs(min([Dy_x, 0]))
+    Pz = solar_arr[4]*max([Dz_x, 0]) + solar_arr[5]*np.abs(min([Dz_x, 0]))
 
-print(f"Point rotated:{p_2}")
+    return Px+Py+Pz
 
-points = np.array(fibonacci_sphere())
+
+
+
