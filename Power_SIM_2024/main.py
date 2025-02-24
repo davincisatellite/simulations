@@ -18,13 +18,17 @@ radii = orbit.posVectorPlanar(theta_vals, semi_major, ecc)
 
 eclipse = np.empty(np.shape(radii)[1])
 
-
-
 for i in range(np.shape(radii)[1]):
     eclipse[i] = orbit.eclypseCheck(radii[:,i], earth_rad)
 
+# Generates a set of evenly spaced out vectors on a unit sphere.
+rotation_vecs = att.fibonacci_sphere(points= 100)
 
-
+# TODO: Implement loop that goes through each vector.
+# TODO: Implement nested loop that rotates each vector 360º with given step.
+# TODO: Implement power generation calculating for each attitude. 
+    # Probably just use the value of the rotated point for each coordinate.
+    # Means power production depends only on cosine of incidence angle.
 
 plt.plot(theta_vals, eclipse)
 
