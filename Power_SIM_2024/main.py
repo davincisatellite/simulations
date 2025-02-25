@@ -43,22 +43,17 @@ initial_att = np.array([[1,0,0],[0,1,0],[0,0,1]])
 
 # Generates array of rotation angles.
 angle_step = 10 # degrees
-angle_array = np.arange(start= 0, stop= 360, step= angle_step) * (np.pi/180)
+angle_array = np.arange(start= 0, stop= 370, step= angle_step) * (np.pi/180)
 
 # Initializes empty vector to store power values.
-power_array = np.empty(np.size(angle_array))
+# power_array = np.empty(np.size(angle_array))
 power_library = []
 
-rot_vector_array_test = np.array([[1,0,0],[0,1,0],[0,0,1]])
-
-# TODO: Rotating through vector (1,0,0) should be constant. This is not what 
-# happens. Figure this out. 
-
 # Loops through available rotation vectors.
-for rot_vector in rot_vector_array_test:
+for rot_vector in rot_vector_array:
 
-    print(rot_vector)
     i = 0
+    power_array = np.empty(np.size(angle_array))
 
     # Rotates initial attitude throughout 360º on the given rotation vector.
     for angle in angle_array:
@@ -87,11 +82,29 @@ for rot_vector in rot_vector_array_test:
     else:
         power_library = np.vstack([power_library, power_array])
 
-plt.plot(angle_array, power_library[0,:], "b")
-plt.plot(angle_array, power_library[1,:], "or")
-plt.plot(angle_array, power_library[2,:], "g")
+# Calculates weighted average
+tumbling_avg = np.average(power_library)
 
-plt.show()
+print(f"Average Tumbling Power Generation: {tumbling_avg} W")
+
+# TODO: Add some statistics in here to get a deviation and all that other
+# juicy stuff.
+
+# Just some plotting for fun. 
+# Feel free to disable if you don't like spaghetti. :)
+if tumbling_spaghetti := False:
+    fig = plt.figure(figsize=(15,8), dpi=80)
+
+    ax = fig.add_subplot(1, 1, 1)
+
+    for i in range(100):
+        rot_vector = rot_vector_array[i]
+        i_label = f"Rotation Vector {rot_vector}"
+        ax.plot(angle_array*180/np.pi, power_library[i,:], label= i_label)
+
+    ax.grid()
+
+    plt.show()
 
 
 
