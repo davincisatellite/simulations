@@ -25,6 +25,8 @@ eclipse = np.empty(np.shape(radii)[1])
 for i in range(np.shape(radii)[1]):
     eclipse[i] = orbit.eclypseCheck(radii[:,i], earth_rad)
 
+
+
 ###########################################################################
 # POWER GENERATION STUFF ##################################################
 ###########################################################################
@@ -33,11 +35,11 @@ for i in range(np.shape(radii)[1]):
 rot_vector_array = att.fibonacci_sphere(samples= 100)
 
 # Creates solar array distribution: [+X, -X, +Y, -Y, +Z, -Z] W
-solar_cell = 1.2 # [Watt]
+solar_cell = 1.08 # [Watt]
 solar_array = [4*solar_cell, 4*solar_cell, 4*solar_cell, 4*solar_cell,
                2*solar_cell, 2*solar_cell]
 
-# Initializes the attitude of the satellite as its vehicle X-axis pointing 
+# Initializes the attitude of the satellite with its vehicle X-axis pointing 
 # towards the sun.
 initial_att = np.array([[1,0,0],[0,1,0],[0,0,1]])
 
@@ -92,7 +94,7 @@ print(f"Average Tumbling Power Generation: {tumbling_avg} W")
 
 # Just some plotting for fun. 
 # Feel free to disable if you don't like spaghetti. :)
-if tumbling_spaghetti := False:
+if tumbling_spaghetti := True:
     fig = plt.figure(figsize=(15,8), dpi=80)
 
     ax = fig.add_subplot(1, 1, 1)
