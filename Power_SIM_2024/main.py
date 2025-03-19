@@ -5,11 +5,14 @@ import time
 import orbit 
 import attitude as att
 
-theta_vals = np.linspace(0, 720, 200)
+
+plt_dir = "./Plots/"
 
 ###########################################################################
 # ORBITAL STUFF ###########################################################
 ###########################################################################
+
+theta_vals = np.linspace(0, 720, 200)
 
 semi_major = 6700 #Semi major axis [km]
 ecc = 0.05 #Eccentricity
@@ -27,38 +30,34 @@ for i in range(np.shape(radii)[1]):
     eclipse[i] = orbit.eclypseCheck(radii[:,i], earth_rad)
 
 
-
 ###########################################################################
 # POWER GENERATION STUFF ##################################################
 ###########################################################################
-
-# Generates a set of evenly spaced out vectors on a unit sphere.
-rot_vector_array = att.fibonacci_sphere(samples= 400)
-
-# Verification array. 
-# rot_vector_array = [[1,0,0],[0,1,0],[0,0,1]]
-
 # Creates solar array distribution: [+X, -X, +Y, -Y, +Z, -Z] W
 solar_cell = 1.08 # [Watt]
 solar_array = [4*solar_cell, 4*solar_cell, 4*solar_cell, 4*solar_cell,
                2*solar_cell, 2*solar_cell]
 
-# Initializes the attitude of the satellite with its vehicle X-axis pointing 
-# towards the sun.
-initial_att_1 = np.array([[1,0,0],[0,1,0],[0,0,1]])
-initial_att_2 = np.array([[0,1,0],[1,0,0],[0,0,1]])
-initial_att_3 = np.array([[0,0,1],[0,1,0],[1,0,0]])
-
-initial_atts = [initial_att_1, initial_att_2, initial_att_3]
-
-# Initializes empty vector to store power values.
-power_library = []
-
-# Generates random array of rotation angles. 
-angle_array = np.random.uniform(low=0, high=360, size=100) * (np.pi/180)
-att_indx = 0
 
 if old_method := False:
+    # Generates a set of evenly spaced out vectors on a unit sphere.
+    rot_vector_array = att.fibonacci_sphere(samples= 400)
+
+    # Initializes the attitude of the satellite with its vehicle X-axis pointing 
+    # towards the sun.
+    initial_att_1 = np.array([[1,0,0],[0,1,0],[0,0,1]])
+    initial_att_2 = np.array([[0,1,0],[1,0,0],[0,0,1]])
+    initial_att_3 = np.array([[0,0,1],[0,1,0],[1,0,0]])
+
+    initial_atts = [initial_att_1, initial_att_2, initial_att_3]
+
+    # Initializes empty vector to store power values.
+    power_library = []
+
+    # Generates random array of rotation angles. 
+    angle_array = np.random.uniform(low=0, high=360, size=100) * (np.pi/180)
+    att_indx = 0
+
     for initial_att in initial_atts:
 
         new_attitude = initial_att
@@ -122,15 +121,38 @@ if new_method := True:
     # Generate random set of atttiudes. 
     num_attitudes = 2000
     random_atts = att.generate_random_attitudes(num_attitudes)
+    set_atts = att.generate_set_attitudes(num_attitudes)
 
-    powers = np.empty(0)
+    # Initializes empty power vector.
+    powers_rand = np.empty(0)
+    powers_set = np.empty(0)
 
-    for attittude in random_atts:
+    for att_index in range(num_attitudes):
         # Calculate power produced in each attitude. 
-        powers = np.append(powers, att.power_output(attittude, solar_array))
+        powers_rand = np.append(powers_rand, att.power_output(
+            random_atts[att_index], solar_array))
+        powers_set = np.append(powers_set, att.power_output(
+            set_atts[att_index], solar_array))
 
-    # Returns average power. 
-    print(f"Average power: {np.average(powers)} W.")
+
+    # Returns average powers. 
+    print(f"Average power (random): {np.average(powers_rand)} W.")
+    print(f"Average power (set): {np.average(powers_set)} W.")
+
+    # Plots histogram of power values.  
+    fig = plt.figure(figsize=(15,8), dpi=80)
+
+    ax = fig.add_subplot(2, 1, 1)
+    ax.hist(powers_rand, bins= 40)
+
+    ax = fig.add_subplot(2, 1, 2)
+    ax.hist(powers_set, bins= 40)
+
+    plt.show()
+
+
+
+    
 
 
 # TODO: Add some statistics in here to get a deviation and all that other

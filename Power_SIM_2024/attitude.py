@@ -29,6 +29,16 @@ def random_quaternion():
     return np.array([q0, q1, q2, q3])
 
 
+def set_quaternion(quaternion_val):
+    """Generate a set unit quaternion."""
+    u1, u2, u3 = np.ones(3)*quaternion_val
+    q0 = np.sqrt(1 - u1) * np.sin(2 * np.pi * u2)
+    q1 = np.sqrt(1 - u1) * np.cos(2 * np.pi * u2)
+    q2 = np.sqrt(u1) * np.sin(2 * np.pi * u3)
+    q3 = np.sqrt(u1) * np.cos(2 * np.pi * u3)
+    return np.array([q0, q1, q2, q3])
+
+
 def quaternion_to_rotation_matrix(q):
     """Convert a quaternion to a 3x3 rotation matrix."""
     q0, q1, q2, q3 = q
@@ -44,6 +54,16 @@ def generate_random_attitudes(num_attitudes):
     attitudes = []
     for _ in range(num_attitudes):
         q = random_quaternion()
+        R = quaternion_to_rotation_matrix(q)
+        attitudes.append(R)
+    return attitudes
+
+
+def generate_set_attitudes(num_attitudes):
+    """Generate a list of random satellite attitudes."""
+    attitudes = []
+    for quaternion_val in np.linspace(0,1,num_attitudes):
+        q = set_quaternion(quaternion_val)
         R = quaternion_to_rotation_matrix(q)
         attitudes.append(R)
     return attitudes
