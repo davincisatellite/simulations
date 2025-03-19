@@ -1,11 +1,12 @@
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 from numpy import sin, cos, max, min
 
+
 def get_quaternion(rot_vec, angle):
-    """
-    Returns the quaternion for a known rotation axis and angle of rotation.
+    """Returns the quaternion for a known rotation axis and angle of rotation.
     Inputs:
     - rot_vec: 3-element rotational unit vector. 
     - angle: Angle of rotation 
@@ -16,6 +17,36 @@ def get_quaternion(rot_vec, angle):
     q_3 = rot_vec[2] * sin(angle/2)
 
     return np.array([q_0, q_1, q_2, q_3])
+
+
+def random_quaternion():
+    """Generate a random unit quaternion."""
+    u1, u2, u3 = np.random.uniform(0, 1, 3)
+    q0 = np.sqrt(1 - u1) * np.sin(2 * np.pi * u2)
+    q1 = np.sqrt(1 - u1) * np.cos(2 * np.pi * u2)
+    q2 = np.sqrt(u1) * np.sin(2 * np.pi * u3)
+    q3 = np.sqrt(u1) * np.cos(2 * np.pi * u3)
+    return np.array([q0, q1, q2, q3])
+
+
+def quaternion_to_rotation_matrix(q):
+    """Convert a quaternion to a 3x3 rotation matrix."""
+    q0, q1, q2, q3 = q
+    return np.array([
+        [1 - 2*(q2**2 + q3**2), 2*(q1*q2 - q0*q3), 2*(q1*q3 + q0*q2)],
+        [2*(q1*q2 + q0*q3), 1 - 2*(q1**2 + q3**2), 2*(q2*q3 - q0*q1)],
+        [2*(q1*q3 - q0*q2), 2*(q2*q3 + q0*q1), 1 - 2*(q1**2 + q2**2)]
+    ])
+
+
+def generate_random_attitudes(num_attitudes):
+    """Generate a list of random satellite attitudes."""
+    attitudes = []
+    for _ in range(num_attitudes):
+        q = random_quaternion()
+        R = quaternion_to_rotation_matrix(q)
+        attitudes.append(R)
+    return attitudes
 
 
 def quaternion_multiplication(quat_1, quat_2):
@@ -42,8 +73,7 @@ def quaternion_multiplication(quat_1, quat_2):
     
 
 def quaternion_rotation(point, quaternion):
-    """
-    Returns the result of applying a rotation to the given point. Rotation 
+    """Returns the result of applying a rotation to the given point. Rotation 
     given by a quaternion.
     Inputs:
     - point: 3-element array of rotated point coords.
@@ -52,6 +82,7 @@ def quaternion_rotation(point, quaternion):
     Output:
     - rotated_pt: Returns the cartesian position of the rotated point.
     """
+    # Converts point into quaternion representation. 
     p_1 = np.append(0, point)
 
     # Check if no rotation is applied.
@@ -75,7 +106,7 @@ def fibonacci_sphere(samples=1000):
     Inputs:
     - points: Number of evenly spaced out points in the sphere
     Outputs:
-    - points: 
+    - points: samples x 3 sized array of points on the 1-radius sphere.
     """
     points = []
     phi = math.pi * (math.sqrt(5.) - 1.)  # golden angle in radians
@@ -95,8 +126,7 @@ def fibonacci_sphere(samples=1000):
 
 
 def power_output(orient, solar_arr):
-    """
-    Retrieves power production depending on satellite orientation. Considers
+    """Retrieves power production depending on satellite orientation. Considers
     an external reference frame where X-axis is sun-pointing. Assumes direct
     correlation between cosine of incidence and power production.
     Inputs:
@@ -115,7 +145,3 @@ def power_output(orient, solar_arr):
     Pz = solar_arr[4]*max([Dz_x, 0]) + solar_arr[5]*np.abs(min([Dz_x, 0]))
 
     return Px+Py+Pz
-
-
-
-
