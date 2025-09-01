@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from tudat_setup import * 
 from assist_functions import *
 from power_sim import *
+from modes import *
 from tudatpy.astro import element_conversion
 from tudatpy.util import result2array
 from tudatpy.data import save2txt
@@ -207,44 +208,54 @@ if __name__ == "__main__":
         solar_pos_body_frame_unit =\
              solar_pos_body_frame / np.linalg.norm(
                  solar_pos_body_frame, axis= 1)[:,None]
-        power_solar = power_output(
+        powerSolar = power_output(
             solar_pos_body_frame= solar_pos_body_frame_unit,
             solar_arr= solar_array)
         # Extracts shadow function (1: Illuminated to 0: Fully eclipsed)
-        shadow_array = dependent_array[:,1]
+        shadowArray = dependent_array[:,1]
         # Uses shadow array to get final power production through orbit. 
-        power_solar = power_solar * shadow_array
-
-        # Passive power consumption:
-        power_passive_base = 0.66           # W
-        power_passive_payload = 1.32        
-        power_passive_ping = 0.73
-        power_passive = \
-            power_passive_base + power_passive_payload + power_passive_ping
-
-        power_total = power_solar - power_passive
+        powerSolar = powerSolar * shadowArray
 
         # Initializes empty battery charge array. 
         batt_current = np.zeros(np.size(times))
         batt_current[0] = batt_start
 
-        # Charge-discharge value. 
-        # TODO: Find a way to avoid another for loop here. Something with 
+        # Placeholder. Defines starting mode as the "active" mode. 
+        # TODO: replace with a more accurate starting mode. 
+        modeCurrent = modes['active']
+
+        # NOTE: Find a way to avoid another for loop here. Something with 
         # integration might work? But needs to detect when maximum battery
         # charge is reached.
         for i in range(np.size(times) -1):
             batt_old = batt_current[i]
 
+            # State machine
+            # Currently only flips between "active" and safe modes. 
+            # TODO: Implement mode logic between all other modes. 
+            modeOld = modeCurrent
+
+            if modeOld.check_run(batteryCharge= batt_old, 
+                                 sunlight= shadowArray[i]):
+                modeCurrent = modeOld
+            else:
+                modeCurrent = safeMode
+
             # TODO: Implement transient power consumptions. Probably in some 
-            # every nth orbit kind of way. 
+            # every nth orbit kind of way? Would be best to figure out actual
+            # consumption. 
             # - dice: Every 6th orbit. (1.33W * 19s)
             # - short overpass: Every 100th orbit. (4.23W * 130s)
             # - medium overpass: Every 100th orbit. (4.23W * 600s)
             # - long overpass: Every 17th orbit. (4.23W * 690s)
             # - point: Every 6th orbit. (2.69W * 72s)
 
+            
+
+            powerNet = powerSolar[i] - modeCurrent.powerDrain
+
             # Computes produced energy in step, adds to current batt charge. 
-            charge = (power_total[i] * time_step) / 60**2      # [W*h]
+            charge = (powerNet * time_step) / 60**2      # [W*h]
             
             batt_new = batt_old + charge
 
@@ -255,9 +266,9 @@ if __name__ == "__main__":
                 batt_current[i+1] = 0.0
             else:
                 batt_current[i+1] = batt_new
-        
+
         # TODO: Plot these nicely. 
-        plt.plot(times, power_solar, "-r", label="Power Produced")
+        plt.plot(times, powerSolar, "-r", label="Power Produced")
         plt.plot(times, batt_current, "--b", label="Stored Energy")
         plt.grid()
         plt.legend()

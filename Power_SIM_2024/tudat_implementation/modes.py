@@ -12,12 +12,13 @@ class mode:
     - powerDrain: float. Power drain of mode in W. 
     """
     def __init__(self, modeName:str, batteryCond=0.0 , sunlightCond=False,
-                 powerDrain=0.0):
+                 powerDrain=0.0, switchTo:str="safe"):
         
         self.name = modeName
         self.batteryCond = batteryCond
         self.sunlightCond = sunlightCond
         self.powerDrain = powerDrain
+        self.switchTo = switchTo
 
     def check_run(self, batteryCharge, sunlight):
         """Checks if conditions for mode to be active are met.
@@ -48,14 +49,23 @@ class mode:
         else:
             sunlightCheck = True
 
-        return batteryCheck, sunlightCheck
+        return batteryCheck and sunlightCheck
             
-safeMode = mode(powerDrain= 1.0, modeName="safeMode")
-checkMode = mode(batteryCond= 100.0, sunlightCond= 1.0, powerDrain= 5.0,
-                 modeName= "checkMode")
+# TODO: This needs a citation. Is it the safe mode consumption??
+powerPassiveBase = 0.66           # W
+powerPassivePayload = 1.32        
+powerPassivePing = 0.73
 
-currentMode = checkMode 
-currentMode.check_run(batteryCharge= 50, sunlight= 1.0)
+safeModeDrain = powerPassiveBase + powerPassivePayload + powerPassivePing
 
+safeMode = mode(powerDrain= safeModeDrain, modeName="safeMode", 
+                switchTo= "active")
+
+# NOTE: Placeholder
+activeMode = mode(batteryCond= 15.0, sunlightCond= 0.0, powerDrain= 5.0,
+                 modeName= "activeMode", switchTo= "safe")
+
+# Defines the dictionary of modes. 
+modes = {'safe':safeMode, 'active':activeMode}
             
 
