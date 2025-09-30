@@ -27,13 +27,13 @@ def tumbling_powers(solarArray, numVals = 1):
     random_quaternion_tumbling method. 
     """
     if numVals == 0:
-        return 
+        print("ERROR: No tumbling values requested.")
+        tumblingPowers = 0
     else:
-
         tumblingPowers = np.empty(numVals)
 
         for i in range(numVals):
             tumblingPowers[i] = np.average(
                 random_quaternion_tumbling(solarArray= solarArray))
 
-        return tumblingPowers
+    return tumblingPowers

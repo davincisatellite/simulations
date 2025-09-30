@@ -34,12 +34,14 @@ def random_quaternion_tumbling(solarArray, numAttitudes = 2000,
         if randomAvg:
             powersRand = np.append(powersRand, att.power_output(
                 random_atts[att_index], solarArray))
-        if randomSet:
+        # Legacy code. Was using set attitudes for the tumbling generation. 
+        """if randomSet:
             powersSet = np.append(powersSet, att.power_output(
-                set_atts[att_index], solarArray))
+                set_atts[att_index], solarArray))"""
             
     powersRand = np.average(powersRand)
-    powersSet = np.average(powersSet)
+    # Legacy code. Was using set attitudes for the tumbling generation. 
+    #powersSet = np.average(powersSet)
             
     # Legacy code. Plots results. 
     """ 
@@ -58,7 +60,7 @@ def random_quaternion_tumbling(solarArray, numAttitudes = 2000,
 
     plt.show() """
 
-    return powersRand, powersSet
+    return powersRand
 
 if __name__ == "__main__":
     ###########################################################################

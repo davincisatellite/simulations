@@ -42,8 +42,8 @@ if __name__ == "__main__":
     # Creates solar array distribution as: [+X, -X, +Y, -Y, +Z, -Z]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solarArray = [4*solar_cell, 4*solar_cell, 4*solar_cell, 
-                   4*solar_cell, 2*solar_cell, 2*solar_cell]
+    solarArray = [4*solar_cell, 4*solar_cell, 2*solar_cell, 
+                   4*solar_cell, 2*solar_cell, 0*solar_cell]
     
     # Total tumbling power based on the sphere of quaternions method in
     # tumbling_code. 
@@ -57,7 +57,6 @@ if __name__ == "__main__":
         tumblingPowers = tumbling_powers(solarArray= solarArray, numVals= 1)
         # TODO: Decide whether to do this or a set of tests for different 
         # tumbling powers. 
-        powerSolarTumbling = np.average(tumblingPowers)
     
     # Battery capacity. [W*h]
     # Taken from iEPS Type A,B,C datasheet. 
@@ -79,9 +78,9 @@ if __name__ == "__main__":
     starting_time = tudat_date.epoch()
 
     # Defines total propagation time in hours. 
-    prop_time = 36.0
+    prop_time = 2.0
     # Defines constant time step in seconds. 
-    time_step = 60.0
+    time_step = 20.0
 
     # Defines initial keplerian orbital elements. 
     keplerian_elems = np.array([
@@ -128,7 +127,7 @@ if __name__ == "__main__":
     # This section propagates the actual orbit to the desired stop time. 
     # Make any changes to environment, orbit or vehicle properties and this
     # needs to be run again. 
-    if propagate := True:
+    if propagate := False:
         
         # Creates propagation termination settings. 
         time_termination_settings = propagation_setup.propagator.time_termination(
@@ -211,7 +210,9 @@ if __name__ == "__main__":
         state_array, dependent_array = read_files()
 
         if tumblingCheck:
-            powerSolar = powerSolarTumbling
+            # TODO: Implement loop that tests power production through all 
+            # average powers in the tumbling array. 
+            powerSolar = tumblingPowers
         else:
             inertial_to_body_rot_frame = dependent_array[:,5:14]
             solar_pos_relative_to_sat = dependent_array[:,2:5]
@@ -242,6 +243,19 @@ if __name__ == "__main__":
         # Uses shadow array to get final power production through orbit. 
         powerSolar = powerSolar * shadowArray
 
+        ### TODO: This whole section can be done better. 
+        # Imports true anomaly values. 
+        trueAnomaly = dependent_array[:,-1] * 180/np.pi
+
+        # Finds closest index to 360º (One orbit) 
+        indx = (np.abs(trueAnomaly - 360)).argmin()
+        print(indx)
+
+        # Calculates average of power production through orbit. 
+        orbitAvg = np.average(powerSolar[:indx])
+
+        print(f"Tumbling power production average: {tumblingPowers} W")
+        print(f"Orbit average power: {orbitAvg} W")
 
         ### Battery charge operations ###
 
@@ -367,7 +381,7 @@ if __name__ == "__main__":
 
         plt.show()
     
-
+    ######      PLOTTING
     if plot_data := False:
 
         #######  Plotting Shenanigans  #######
