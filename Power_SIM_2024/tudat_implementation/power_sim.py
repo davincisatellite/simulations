@@ -33,6 +33,7 @@ def tumbling_powers(solarArray, numVals = 1):
         tumblingPowers = np.empty(numVals)
 
         for i in range(numVals):
-            tumblingPowers[i] = random_quaternion_tumbling(solarArray= solarArray)
+            tumblingPowers[i] = np.average(
+                random_quaternion_tumbling(solarArray= solarArray))
 
         return tumblingPowers
