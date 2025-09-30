@@ -1,6 +1,6 @@
 import numpy as np
 
-from algebra import rotationX, rotationY, rotationZ
+from tumbling_code.algebra import rotationX, rotationY, rotationZ
 
 def orbitRad(theta, semi_maj, ecc):
     """

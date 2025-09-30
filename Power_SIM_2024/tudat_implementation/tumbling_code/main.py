@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-import orbit
-import attitude as att
+import tumbling_code.orbit as orbit
+import tumbling_code.attitude as att
 
 
 plt_dir = "./Plots/"
@@ -16,6 +16,49 @@ Assumptions and units stuff.
 - Distance in km.
 - All other units in SI. NOTE: This means radians.
 """
+
+# New method for tumbling. Creates a bunch of quaternions, transforms them
+# into rotation matrices and takes these as a set of attitudes. 
+def random_quaternion_tumbling(solarArray, numAttitudes = 2000,
+                                randomAvg = True, randomSet = False):
+    # Generate random set of atttiudes. 
+    random_atts = att.generate_random_attitudes(numAttitudes)
+    set_atts = att.generate_set_attitudes(numAttitudes)
+
+    # Initializes empty power vector.
+    powersRand = np.empty(0)
+    powersSet = np.empty(0)
+
+    for att_index in range(numAttitudes):
+        # Calculate power produced in each attitude. 
+        if randomAvg:
+            powersRand = np.append(powersRand, att.power_output(
+                random_atts[att_index], solarArray))
+        if randomSet:
+            powersSet = np.append(powersSet, att.power_output(
+                set_atts[att_index], solarArray))
+            
+    powersRand = np.average(powersRand)
+    powersSet = np.average(powersSet)
+            
+    # Legacy code. Plots results. 
+    """ 
+    # Returns average powers. 
+    print(f"Average power (random): {np.average(powers_rand)} W.")
+    print(f"Average power (set): {np.average(powers_set)} W.")
+
+    # Plots histogram of power values.  
+    fig = plt.figure(figsize=(15,8), dpi=80)
+
+    ax = fig.add_subplot(2, 1, 1)
+    ax.hist(powers_rand, bins= 40)
+
+    ax = fig.add_subplot(2, 1, 2)
+    ax.hist(powers_set, bins= 40)
+
+    plt.show() """
+
+    return powersRand, powersSet
 
 if __name__ == "__main__":
     ###########################################################################
@@ -187,42 +230,7 @@ if __name__ == "__main__":
 
             att_indx += 1
 
-        plt.show()
-
-    # New method for tumbling. Creates a bunch of quaternions, transforms them
-    # into rotation matrices and takes these as a set of attitudes. 
-    if new_method := True:
-        # Generate random set of atttiudes. 
-        num_attitudes = 2000
-        random_atts = att.generate_random_attitudes(num_attitudes)
-        set_atts = att.generate_set_attitudes(num_attitudes)
-
-        # Initializes empty power vector.
-        powers_rand = np.empty(0)
-        powers_set = np.empty(0)
-
-        for att_index in range(num_attitudes):
-            # Calculate power produced in each attitude. 
-            powers_rand = np.append(powers_rand, att.power_output(
-                random_atts[att_index], solar_array))
-            powers_set = np.append(powers_set, att.power_output(
-                set_atts[att_index], solar_array))
-
-
-        # Returns average powers. 
-        print(f"Average power (random): {np.average(powers_rand)} W.")
-        print(f"Average power (set): {np.average(powers_set)} W.")
-
-        # Plots histogram of power values.  
-        fig = plt.figure(figsize=(15,8), dpi=80)
-
-        ax = fig.add_subplot(2, 1, 1)
-        ax.hist(powers_rand, bins= 40)
-
-        ax = fig.add_subplot(2, 1, 2)
-        ax.hist(powers_set, bins= 40)
-
-        plt.show()
+        plt.show()    
 
     # Just some plotting for fun. 
     # Feel free to disable if you don't like spaghetti. :)

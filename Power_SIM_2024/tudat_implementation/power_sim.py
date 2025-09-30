@@ -1,5 +1,9 @@
 import numpy as np
 
+
+from tumbling_code.main import random_quaternion_tumbling
+
+
 def power_output(solar_pos_body_frame, solar_arr):
     # Extract coordinates from solar position in body frame. 
     x = solar_pos_body_frame[:,0]
@@ -16,3 +20,19 @@ def power_output(solar_pos_body_frame, solar_arr):
         solar_arr[5]*np.abs(np.min([z, zeros], axis=0))
 
     return Px+Py+Pz
+
+
+def tumbling_powers(solarArray, numVals = 1):
+    """Creates an array of tumbling power values via the 
+    random_quaternion_tumbling method. 
+    """
+    if numVals == 0:
+        return 
+    else:
+
+        tumblingPowers = np.empty(numVals)
+
+        for i in range(numVals):
+            tumblingPowers[i] = random_quaternion_tumbling(solarArray= solarArray)
+
+        return tumblingPowers

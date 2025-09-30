@@ -19,6 +19,7 @@ from tudat_setup import *
 from assist_functions import *
 from power_sim import *
 from modes import *
+from tumbling_code.main import random_quaternion_tumbling
 from tudatpy.astro import element_conversion
 from tudatpy.util import result2array
 from tudatpy.data import save2txt
@@ -26,7 +27,13 @@ from tudatpy.data import save2txt
 # Load tudat spice kernels.
 spice.load_standard_kernels()
 
+
+
 if __name__ == "__main__":
+
+    # Check value for using tumbling for power calculations instead of specific
+    # attitude power. 
+    tumblingCheck = True
 
     ### Spacecraft properties definition. 
     # Defines spacecraft mass in [kg]. 
@@ -35,8 +42,20 @@ if __name__ == "__main__":
     # Creates solar array distribution as: [+X, -X, +Y, -Y, +Z, -Z]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solar_array = [4*solar_cell, 4*solar_cell, 4*solar_cell, 
+    solarArray = [4*solar_cell, 4*solar_cell, 4*solar_cell, 
                    4*solar_cell, 2*solar_cell, 2*solar_cell]
+    
+    # Total tumbling power based on the sphere of quaternions method in
+    # tumbling_code. 
+    
+    # NOTE: This tumbling code produces estimates which are an average of 
+    # random satellite attitudes; meaning there is some variation with each
+    # run of the program. numVals defines the number of values produced, might 
+    # be helpful to simulate with more values to see what the variation is. 
+    # But that's some statistics stuff that I don't want to do. 
+    if tumblingCheck: 
+        tumblingPowers = tumbling_powers(solarArray= solarArray, numVals= 1)
+
     
     # Battery capacity. [W*h]
     # Taken from iEPS Type A,B,C datasheet. 
@@ -58,7 +77,7 @@ if __name__ == "__main__":
     starting_time = tudat_date.epoch()
 
     # Defines total propagation time in hours. 
-    prop_time = 12.0
+    prop_time = 36.0
     # Defines constant time step in seconds. 
     time_step = 60.0
 
@@ -67,9 +86,9 @@ if __name__ == "__main__":
         8e6,                    # Semi-major axis [m]
         0.05,                   # eccentricity 
         np.deg2rad(86),         # Inclination [rads]. Degrees in ().
-        np.deg2rad(0),                    # arg of periapsis [rads]
+        np.deg2rad(0),          # arg of periapsis [rads]
         np.deg2rad(0),          # longitude of ascending node [rads]
-        np.deg2rad(0),                    # true anomaly [rads]
+        np.deg2rad(0),          # true anomaly [rads]
     ])
 
     # Defines initial spacecraft attitude versus J2000 coordinate frame.
@@ -185,7 +204,7 @@ if __name__ == "__main__":
     ### Post Processing ###
     # All the stuff here doesn't require propagation, but reads off saved vals. 
     # Turn off propagate if you just wanna mess around with this. 
-    if power_behavior := True:
+    if power_behavior := False:
         # Reads values from saved csv. 
         state_array, dependent_array = read_files()
 
@@ -210,7 +229,7 @@ if __name__ == "__main__":
                  solar_pos_body_frame, axis= 1)[:,None]
         powerSolar = power_output(
             solar_pos_body_frame= solar_pos_body_frame_unit,
-            solar_arr= solar_array)
+            solar_arr= solarArray)
         # Extracts shadow function (1: Illuminated to 0: Fully eclipsed)
         shadowArray = dependent_array[:,1]
         # Uses shadow array to get final power production through orbit. 
@@ -232,14 +251,15 @@ if __name__ == "__main__":
 
             # State machine
             # Currently only flips between "active" and safe modes. 
-            # TODO: Implement mode logic between all other modes. 
             modeOld = modeCurrent
 
-            if modeOld.check_run(batteryCharge= batt_old, 
-                                 sunlight= shadowArray[i]):
+            checkRun, switchMode = modeOld.check_run(
+                batteryCharge= batt_current[i], sunlight= shadowArray[i])
+
+            if checkRun:
                 modeCurrent = modeOld
             else:
-                modeCurrent = safeMode
+                modeCurrent = modes[switchMode]
 
             # TODO: Implement transient power consumptions. Probably in some 
             # every nth orbit kind of way? Would be best to figure out actual
@@ -274,6 +294,7 @@ if __name__ == "__main__":
         plt.legend()
         plt.show()
 
+    ######      VERIFICATION
     ### Verified for simple Earth-pointing. 
     if plot_nadir_verification := False:
         # Extracts rotation matrices. 
