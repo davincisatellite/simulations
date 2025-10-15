@@ -37,13 +37,13 @@ if __name__ == "__main__":
 
     ### Spacecraft properties definition. 
     # Defines spacecraft mass in [kg]. 
-    sc_mass = 2.8
+    scMass = 2.8
 
     # Creates solar array distribution as: [+X, -X, +Y, -Y, +Z, -Z]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solarArray = [4*solar_cell, 4*solar_cell, 2*solar_cell, 
-                   4*solar_cell, 2*solar_cell, 0*solar_cell]
+    solarArray = [4*solar_cell, 4*solar_cell, 4*solar_cell, 
+                   4*solar_cell, 2*solar_cell, 2*solar_cell]
     
     # Total tumbling power based on the sphere of quaternions method in
     # tumbling_code. 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     # random satellite attitudes; meaning there is some variation with each
     # run of the program. numVals defines the number of values produced, might 
     # be helpful to simulate with more values to see what the variation is. 
-    # But that's some statistics stuff that I don't want to do. 
+    # But that's some statistics stuff that I don't want to do atm.  -Tom.
     if tumblingCheck: 
         tumblingPowers = tumbling_powers(solarArray= solarArray, numVals= 1)
         # TODO: Decide whether to do this or a set of tests for different 
@@ -64,29 +64,29 @@ if __name__ == "__main__":
     cellCap = 3.2       # Ah
     cellInSeries = 4
      
-    batt_max = cellVolt * cellInSeries * cellCap
+    battMax = cellVolt * cellInSeries * cellCap
 
     # Battery start charge. [W*h]
-    batt_start = batt_max/2
+    batt_start = battMax/2
 
     ### Propagation-related defitions. 
-    # Defines simulation start date and time. (YYYY-MM-DD:HH:MM:SS)
-    python_date = datetime.fromisoformat("2025-04-21T00:00:00.000000")
+    # Defines simulation start date and time (UTC). (YYYY-MM-DDTHH:MM:SS)
+    python_date = datetime.fromisoformat("2025-06-21T07:00:00.000000")
     # Converts into tudat time format. 
     tudat_date = time_conversion.datetime_to_tudat(python_date)
     # Defines initial time as seconds since J2000. 
     starting_time = tudat_date.epoch()
 
     # Defines total propagation time in hours. 
-    prop_time = 2.0
+    prop_time = 6.0
     # Defines constant time step in seconds. 
     time_step = 20.0
 
     # Defines initial keplerian orbital elements. 
     keplerian_elems = np.array([
-        8e6,                    # Semi-major axis [m]
-        0.05,                   # eccentricity 
-        np.deg2rad(86),         # Inclination [rads]. Degrees in ().
+        6.885e6,                # Semi-major axis [m]
+        0.015,                  # eccentricity 
+        np.deg2rad(98),         # Inclination [rads]. Degrees in ().
         np.deg2rad(0),          # arg of periapsis [rads]
         np.deg2rad(0),          # longitude of ascending node [rads]
         np.deg2rad(0),          # true anomaly [rads]
@@ -96,7 +96,6 @@ if __name__ == "__main__":
     # TODO: Make this relative to some more practical coordinate frame. 
     # See tudat_setup.py file. 
     # TODO: Check whether this is necessary at all. 
-    
     initial_att = np.array(
         [[1,0,0], 
          [0,1,0],
@@ -105,7 +104,7 @@ if __name__ == "__main__":
 
     # Creates environment bodies. 
     bodies = create_bodies(
-        sc_mass= sc_mass,
+        sc_mass= scMass,
         initial_att= initial_att,
         rotation= True,
         starting_time= starting_time,
@@ -123,11 +122,11 @@ if __name__ == "__main__":
         gravitational_parameter= bodies.get("Earth").gravitational_parameter
     )
 
-    ### Propagation ###
+    ##### PROPAGATION #####
     # This section propagates the actual orbit to the desired stop time. 
-    # Make any changes to environment, orbit or vehicle properties and this
-    # needs to be run again. 
-    if propagate := False:
+    # If you make any changes to environment, orbit or vehicle properties and 
+    # this needs to be run again. 
+    if propagate := True:
         
         # Creates propagation termination settings. 
         time_termination_settings = propagation_setup.propagator.time_termination(
@@ -202,9 +201,11 @@ if __name__ == "__main__":
             directory= data_dir
         )
 
-    ### Post Processing ###
+    ##### POST PROCESSING #####
     # All the stuff here doesn't require propagation, but reads off saved vals. 
     # Turn off propagate if you just wanna mess around with this. 
+
+    ### Power Simulations ### 
     if power_behavior := True:
         # Reads values from saved csv. 
         state_array, dependent_array = read_files()
@@ -243,16 +244,16 @@ if __name__ == "__main__":
         # Uses shadow array to get final power production through orbit. 
         powerSolar = powerSolar * shadowArray
 
-        ### TODO: This whole section can be done better. 
+        ### TODO: This whole section can be done better. ###
         # Imports true anomaly values. 
         trueAnomaly = dependent_array[:,-1] * 180/np.pi
 
         # Finds closest index to 360º (One orbit) 
         indx = (np.abs(trueAnomaly - 360)).argmin()
-        print(indx)
 
         # Calculates average of power production through orbit. 
         orbitAvg = np.average(powerSolar[:indx])
+        ### --- ###
 
         print(f"Tumbling power production average: {tumblingPowers} W")
         print(f"Orbit average power: {orbitAvg} W")
@@ -302,8 +303,8 @@ if __name__ == "__main__":
                 
                 batt_new = batt_old + charge
 
-                if batt_new >= batt_max:
-                    batt_current[i+1] = batt_max
+                if batt_new >= battMax:
+                    batt_current[i+1] = battMax
                 elif batt_new <= 0.0:
                     print(f"Warning!: Full Discharge.")
                     batt_current[i+1] = 0.0
@@ -382,24 +383,24 @@ if __name__ == "__main__":
         plt.show()
     
     ######      PLOTTING
-    if plot_data := False:
+    if plot_data := True:
 
         #######  Plotting Shenanigans  #######
         # TODO: Put this in its own little python file.  
         plt.rcParams.update({'font.size': 18})
 
-        ax = plt.figure().add_subplot(projection='3d')
+        #ax = plt.figure().add_subplot(projection='3d')
         ax1 = plt.figure().add_subplot()
 
         times = state_array[:,0] / 60**2
 
-        ax.plot(state_array[:,1], state_array[:,2], state_array[:,3])
+        #ax.plot(state_array[:,1], state_array[:,2], state_array[:,3])
 
         ax1.plot(times, dependent_array[:,1])
 
-        ax.set_zlim(-5e6, 5e6)
-        ax.set_xlim(-5e6, 5e6)
-        ax.set_ylim(-5e6, 5e6)
+        #ax.set_zlim(-5e6, 5e6)
+        #ax.set_xlim(-5e6, 5e6)
+        #ax.set_ylim(-5e6, 5e6)
 
         plt.show()
 
