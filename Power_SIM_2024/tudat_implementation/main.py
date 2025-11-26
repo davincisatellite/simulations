@@ -157,7 +157,7 @@ if __name__ == "__main__":
             np.savetxt(filename, orbitAverages[:,:,i], delimiter= ",")
 
     ### Plots power average data. 
-    
+    # TODO: Put this in its own separate function. 
     if plotAvgs := True:
         for i, inclination in enumerate(incVals):
             # Reads data from saved csv files. 
