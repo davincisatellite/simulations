@@ -114,121 +114,77 @@ if __name__ == "__main__":
     ##### POST PROCESSING #####
     # All the stuff here doesn't require propagation, but reads off saved vals. 
     # Turn off propagate if you just wanna mess around with this. 
+    stateArr, dependentArr = read_files()
 
-    ### Power Simulations ### 
-    if power_behavior := True:
-        # Reads values from saved csv. 
-        state_array, dependent_array = read_files()
+    orbitAvg = orbit_average(
+        stateArr= stateArr,
+        dependentArr= dependentArr, 
+        tumblingPowers= tumblingPowers,
+        tumblingCheck= True,
+    )
 
-        if tumblingCheck:
-            # TODO: Implement loop that tests power production through all 
-            # average powers in the tumbling array. 
-            powerSolar = tumblingPowers
-        else:
-            inertial_to_body_rot_frame = dependent_array[:,5:14]
-            solar_pos_relative_to_sat = dependent_array[:,2:5]
-            # Defines times array (In hours). 
-            times = (dependent_array[:,0] - dependent_array[0,0]) / 60**2 
-
-            # Transforms relative solar position into body-fixed-frame. 
-            solar_pos_body_frame = np.zeros(np.shape(
-                solar_pos_relative_to_sat))
-            for i in range(np.shape(inertial_to_body_rot_frame)[0]):
-                solar_pos_body_frame[i,:] = np.matmul(
-                    np.reshape(inertial_to_body_rot_frame[i,:], [3,3]),
-                    solar_pos_relative_to_sat[i,:]
-                )
-
-            # Outputs power production throughout the orbit, not considering 
-            # eclipse. 
-            solar_pos_body_frame_unit =\
-                solar_pos_body_frame / np.linalg.norm(
-                    solar_pos_body_frame, axis= 1)[:,None]
-            powerSolar = power_output(
-                solar_pos_body_frame= solar_pos_body_frame_unit,
-                solar_arr= solarArray)
-        
-
-        # Extracts shadow function (1: Illuminated to 0: Fully eclipsed)
-        shadowArray = dependent_array[:,1]
-        # Uses shadow array to get final power production through orbit. 
-        powerSolar = powerSolar * shadowArray
-
-        ### TODO: This whole section can be done better. ###
-        # Imports true anomaly values. 
-        trueAnomaly = dependent_array[:,-1] * 180/np.pi
-
-        # Finds closest index to 360º (One orbit) 
-        indx = (np.abs(trueAnomaly - 360)).argmin()
-
-        # Calculates average of power production through orbit. 
-        orbitAvg = np.average(powerSolar[:indx])
-        ### --- ###
-
-        print(f"Tumbling power production average: {tumblingPowers} W")
-        print(f"Orbit average power: {orbitAvg} W")
+    print(f"Tumbling power production average: {tumblingPowers} W")
+    print(f"Orbit average power: {orbitAvg} W")
 
         ### Battery charge operations ###
 
-        if batteryChargeCheck := False:
-            # Initializes empty battery charge array. 
-            batt_current = np.zeros(np.size(times))
-            batt_current[0] = batt_start
+    if batteryChargeCheck := False:
+        # Initializes empty battery charge array. 
+        batt_current = np.zeros(np.size(times))
+        batt_current[0] = batt_start
 
-            # Placeholder. Defines starting mode as the "active" mode. 
-            # TODO: replace with a more accurate starting mode. 
-            modeCurrent = modes['active']
+        # Placeholder. Defines starting mode as the "active" mode. 
+        # TODO: replace with a more accurate starting mode. 
+        modeCurrent = modes['active']
 
-            # NOTE: Find a way to avoid another for loop here. Something with 
-            # integration might work? But needs to detect when maximum battery
-            # charge is reached.
-            for i in range(np.size(times) -1):
-                batt_old = batt_current[i]
+        # NOTE: Find a way to avoid another for loop here. Something with 
+        # integration might work? But needs to detect when maximum battery
+        # charge is reached.
+        for i in range(np.size(times) -1):
+            batt_old = batt_current[i]
 
-                # State machine
-                # Currently only flips between "active" and safe modes. 
-                modeOld = modeCurrent
+            # State machine
+            # Currently only flips between "active" and safe modes. 
+            modeOld = modeCurrent
 
-                checkRun, switchMode = modeOld.check_run(
-                    batteryCharge= batt_current[i], sunlight= shadowArray[i])
+            checkRun, switchMode = modeOld.check_run(
+                batteryCharge= batt_current[i], sunlight= shadowArray[i])
 
-                if checkRun:
-                    modeCurrent = modeOld
-                else:
-                    modeCurrent = modes[switchMode]
+            if checkRun:
+                modeCurrent = modeOld
+            else:
+                modeCurrent = modes[switchMode]
 
-                # TODO: Implement transient power consumptions. Probably in some 
-                # every nth orbit kind of way? Would be best to figure out actual
-                # consumption. 
-                # - dice: Every 6th orbit. (1.33W * 19s)
-                # - short overpass: Every 100th orbit. (4.23W * 130s)
-                # - medium overpass: Every 100th orbit. (4.23W * 600s)
-                # - long overpass: Every 17th orbit. (4.23W * 690s)
-                # - point: Every 6th orbit. (2.69W * 72s)
+            # TODO: Implement transient power consumptions. Probably in some 
+            # every nth orbit kind of way? Would be best to figure out actual
+            # consumption. 
+            # - dice: Every 6th orbit. (1.33W * 19s)
+            # - short overpass: Every 100th orbit. (4.23W * 130s)
+            # - medium overpass: Every 100th orbit. (4.23W * 600s)
+            # - long overpass: Every 17th orbit. (4.23W * 690s)
+            # - point: Every 6th orbit. (2.69W * 72s)
 
-                powerNet = powerSolar[i] - modeCurrent.powerDrain
+            powerNet = powerSolar[i] - modeCurrent.powerDrain
 
-                # Computes produced energy in step, adds to current batt charge. 
-                charge = (powerNet * time_step) / 60**2      # [W*h]
-                
-                batt_new = batt_old + charge
+            # Computes produced energy in step, adds to current batt charge. 
+            charge = (powerNet * time_step) / 60**2      # [W*h]
+            
+            batt_new = batt_old + charge
 
-                if batt_new >= battMax:
-                    batt_current[i+1] = battMax
-                elif batt_new <= 0.0:
-                    print(f"Warning!: Full Discharge.")
-                    batt_current[i+1] = 0.0
-                else:
-                    batt_current[i+1] = batt_new
+            if batt_new >= battMax:
+                batt_current[i+1] = battMax
+            elif batt_new <= 0.0:
+                print(f"Warning!: Full Discharge.")
+                batt_current[i+1] = 0.0
+            else:
+                batt_current[i+1] = batt_new
 
-            # TODO: Plot these nicely. 
-            plt.plot(times, powerSolar, "-r", label="Power Produced")
-            plt.plot(times, batt_current, "--b", label="Stored Energy")
-            plt.grid()
-            plt.legend()
-            plt.show()
-
-    
+        # TODO: Plot these nicely. 
+        plt.plot(times, powerSolar, "-r", label="Power Produced")
+        plt.plot(times, batt_current, "--b", label="Stored Energy")
+        plt.grid()
+        plt.legend()
+        plt.show()
 
 
     ######      VERIFICATION
