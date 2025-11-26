@@ -23,42 +23,17 @@ def random_quaternion_tumbling(solarArray, numAttitudes = 2000,
                                 randomAvg = True, randomSet = False):
     # Generate random set of atttiudes. 
     random_atts = att.generate_random_attitudes(numAttitudes)
-    set_atts = att.generate_set_attitudes(numAttitudes)
 
     # Initializes empty power vector.
     powersRand = np.empty(0)
-    powersSet = np.empty(0)
 
     for att_index in range(numAttitudes):
         # Calculate power produced in each attitude. 
         if randomAvg:
             powersRand = np.append(powersRand, att.power_output(
                 random_atts[att_index], solarArray))
-        # Legacy code. Was using set attitudes for the tumbling generation. 
-        """if randomSet:
-            powersSet = np.append(powersSet, att.power_output(
-                set_atts[att_index], solarArray))"""
-            
+
     powersRand = np.average(powersRand)
-    # Legacy code. Was using set attitudes for the tumbling generation. 
-    #powersSet = np.average(powersSet)
-            
-    # Legacy code. Plots results. 
-    """ 
-    # Returns average powers. 
-    print(f"Average power (random): {np.average(powers_rand)} W.")
-    print(f"Average power (set): {np.average(powers_set)} W.")
-
-    # Plots histogram of power values.  
-    fig = plt.figure(figsize=(15,8), dpi=80)
-
-    ax = fig.add_subplot(2, 1, 1)
-    ax.hist(powers_rand, bins= 40)
-
-    ax = fig.add_subplot(2, 1, 2)
-    ax.hist(powers_set, bins= 40)
-
-    plt.show() """
 
     return powersRand
 

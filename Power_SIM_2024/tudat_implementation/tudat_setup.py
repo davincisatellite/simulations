@@ -1,19 +1,14 @@
-from datetime import datetime
-
 import numpy as np
 import math
 
-from tudatpy import constants, numerical_simulation
-from tudatpy.astro import element_conversion, two_body_dynamics, time_conversion
-from tudatpy.data import save2txt
-from tudatpy.interface import spice
-from tudatpy.numerical_simulation import (
-    environment,
-    environment_setup,
-    estimation_setup,
-    propagation,
-    propagation_setup,
-)
+
+from tudatpy import numerical_simulation
+from tudatpy.numerical_simulation import (environment, environment_setup, \
+    propagation_setup)
+from tudatpy.astro import element_conversion, time_conversion
+from tudatpy.util import result2array
+
+from datetime import datetime
 
 # Defines common directories. 
 data_dir = "./data/"
@@ -35,7 +30,8 @@ def create_bodies(
     varying_attitude= False,
     rotation :bool=False,
     initial_att= np.zeros([3,3]),
-    rot_rate=0.0
+    rot_rate=0.0,
+
     ):
     """This function creates the environment (as a system of bodies) used for the 
     simulation. Has the option of using an exponential Earth atmosphere model.
@@ -223,7 +219,111 @@ def create_rotational_settings(
         bodies, 'davinci', rotation_model_settings)
     
     return bodies
+
+
+def propagate_orbit(
+        propStartISO: str, 
+        propDurationTime: float,
+        timeStep: float, 
+        stateStartKep: np.array,
+        scMass: float,
+        initialAtt: np.array = np.eye(3),
+):
+        
+    ### Propagation-related defitions. 
+    # Defines simulation start date and time (UTC). (YYYY-MM-DDTHH:MM:SS)
+    pythonDate = datetime.fromisoformat(propStartISO)
+    # Converts into tudat time format. 
+    tudatDate = time_conversion.datetime_to_tudat(pythonDate)
+    # Defines initial time as seconds since J2000. 
+    propStartTime = tudatDate.epoch()
+
+     # Creates environment bodies. 
+    bodies = create_bodies(
+        sc_mass= scMass,
+        initial_att= initialAtt,
+        rotation= True,
+        starting_time= propStartTime,
+        time_step= timeStep
+    )
+
+    bodies = create_rotational_settings(
+        bodies= bodies,
+        time_step= timeStep
+        )
+
+    # Defines initial state from keplerian orbital parameters. 
+    initial_state = element_conversion.keplerian_to_cartesian(
+        keplerian_elements= stateStartKep, 
+        gravitational_parameter= bodies.get("Earth").gravitational_parameter
+    )
+
+    ##### PROPAGATION #####
+    # This section propagates the actual orbit to the desired stop time. 
+
+    # Creates propagation termination settings. 
+    time_termination_settings = propagation_setup.propagator.time_termination(
+        termination_time= propStartTime + propDurationTime*60**2
+    )
+
+    # Defines dependent variables. 
+    dependent_variables = [
+        # Stores received irradiance in [W/m^2]. Considers eclypse as 
+        # on/off, no penumbra. Dependent column 1 (Zero is time)
+        propagation_setup.dependent_variable.received_irradiance_shadow_function(
+            target_body= "davinci",
+            source_body= "Sun"
+        ),
+        # Stores position vector of spacecraft relative to the sun in the
+        # Earth-centered coordinate frame. Dependent columns (2 to 4)
+        propagation_setup.dependent_variable.relative_position(
+            body= "davinci", 
+            relative_body= "Sun"
+        ),
+        # Stores the rotation matrix for converting from body_fixed to 
+        # inertial reference frame (J2000). Dependent columns (5 to 13)
+        propagation_setup.dependent_variable.inertial_to_body_fixed_rotation_frame(
+            body= "davinci"
+        ),
+
+        ### REMOVABLE DEPENDENTS TODO: REMOVE ONCE UNNECESSARY
+        # Stores kepler elements. Columns (-1 to -6) 
+        # NOTE: Verification purposes only.  
+        propagation_setup.dependent_variable.keplerian_state(
+            body= "davinci",
+            central_body= "Earth"
+        )
+
+    ]
+
+    # Retrieves propagation settings.
+    propagation_settings = create_prop_settings(
+        bodies= bodies,
+        initial_state= initial_state,
+        initial_time= propStartTime,
+        termination_condition= time_termination_settings,
+        fixed_step_size= timeStep,
+        dependent_variables= dependent_variables,
+        atmo_sim= False
+    )
+
+    # Propagate dynamics. 
+    dynamics_simulator = numerical_simulation.create_dynamics_simulator(
+        bodies, 
+        propagation_settings
+    )
     
+    # Extract state history and dependent variables. 
+    stateHistory = dynamics_simulator.propagation_results.state_history
+    dependentHistory = dynamics_simulator.propagation_results.dependent_variable_history
+
+    stateArr = result2array(stateHistory)
+    dependentArr = result2array(dependentHistory)
+
+    return stateHistory, dependentHistory, stateArr, dependentArr
+
+    
+
 
 # TODO: Might be a good idea to place all these (As different modes of ops) 
 # in their own python file. 

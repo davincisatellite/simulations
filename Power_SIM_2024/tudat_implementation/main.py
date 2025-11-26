@@ -15,14 +15,19 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from tudatpy import numerical_simulation
+from tudatpy.interface import spice
+from tudatpy.astro import element_conversion, time_conversion
+from tudatpy.util import result2array
+from tudatpy.data import save2txt
+
 from tudat_setup import * 
 from assist_functions import *
 from power_sim import *
 from modes import *
-from tumbling_code.main import random_quaternion_tumbling
-from tudatpy.astro import element_conversion
-from tudatpy.util import result2array
-from tudatpy.data import save2txt
+
+from datetime import datetime
+
 
 # Load tudat spice kernels.
 spice.load_standard_kernels()
@@ -63,27 +68,19 @@ if __name__ == "__main__":
     cellVolt = 3.6      # V
     cellCap = 3.2       # Ah
     cellInSeries = 4
-     
     battMax = cellVolt * cellInSeries * cellCap
-
     # Battery start charge. [W*h]
-    batt_start = battMax/2
+    battStart = battMax/2
 
-    ### Propagation-related defitions. 
-    # Defines simulation start date and time (UTC). (YYYY-MM-DDTHH:MM:SS)
-    python_date = datetime.fromisoformat("2025-06-21T07:00:00.000000")
-    # Converts into tudat time format. 
-    tudat_date = time_conversion.datetime_to_tudat(python_date)
-    # Defines initial time as seconds since J2000. 
-    starting_time = tudat_date.epoch()
-
+    # Initial date and time for propagation. 
+    propStartISO = "2025-06-21T07:00:00.000000"
     # Defines total propagation time in hours. 
-    prop_time = 6.0
+    propDurationTime = 6.0
     # Defines constant time step in seconds. 
-    time_step = 20.0
+    timeStep = 20.0
 
     # Defines initial keplerian orbital elements. 
-    keplerian_elems = np.array([
+    stateStartKep = np.array([
         6.885e6,                # Semi-major axis [m]
         0.015,                  # eccentricity 
         np.deg2rad(98),         # Inclination [rads]. Degrees in ().
@@ -92,114 +89,27 @@ if __name__ == "__main__":
         np.deg2rad(0),          # true anomaly [rads]
     ])
 
-    # Defines initial spacecraft attitude versus J2000 coordinate frame.
-    # TODO: Make this relative to some more practical coordinate frame. 
-    # See tudat_setup.py file. 
-    # TODO: Check whether this is necessary at all. 
-    initial_att = np.array(
-        [[1,0,0], 
-         [0,1,0],
-         [0,0,1]]
+    stateHistory, dependentHistory, stateArr, dependentArr = \
+        propagate_orbit(
+            propStartISO= propStartISO, 
+            propDurationTime= propDurationTime,
+            timeStep= timeStep,
+            stateStartKep= stateStartKep,
+            scMass= scMass
+        )
+
+    # Saves values to data files. 
+    # TODO: Rework this into a csv format. 
+    save2txt(
+        solution= stateHistory, 
+        filename= "state_data.csv",
+        directory= data_dir
     )
-
-    # Creates environment bodies. 
-    bodies = create_bodies(
-        sc_mass= scMass,
-        initial_att= initial_att,
-        rotation= True,
-        starting_time= starting_time,
-        time_step= time_step
+    save2txt(
+        solution= dependentHistory,
+        filename= "dependent_data.csv",
+        directory= data_dir
     )
-
-    bodies = create_rotational_settings(
-        bodies= bodies,
-        time_step= time_step
-        )
-
-    # Defines initial state from keplerian orbital parameters. 
-    initial_state = element_conversion.keplerian_to_cartesian(
-        keplerian_elements= keplerian_elems, 
-        gravitational_parameter= bodies.get("Earth").gravitational_parameter
-    )
-
-    ##### PROPAGATION #####
-    # This section propagates the actual orbit to the desired stop time. 
-    # If you make any changes to environment, orbit or vehicle properties and 
-    # this needs to be run again. 
-    if propagate := True:
-        
-        # Creates propagation termination settings. 
-        time_termination_settings = propagation_setup.propagator.time_termination(
-            termination_time= starting_time + prop_time*60**2
-        )
-
-        # Defines dependent variables. 
-        dependent_variables = [
-            # Stores received irradiance in [W/m^2]. Considers eclypse as 
-            # on/off, no penumbra. Dependent column 1 (Zero is time)
-            propagation_setup.dependent_variable.received_irradiance_shadow_function(
-                target_body= "davinci",
-                source_body= "Sun"
-            ),
-            # Stores position vector of spacecraft relative to the sun in the
-            # Earth-centered coordinate frame. Dependent columns (2 to 4)
-            propagation_setup.dependent_variable.relative_position(
-                body= "davinci", 
-                relative_body= "Sun"
-            ),
-            # Stores the rotation matrix for converting from body_fixed to 
-            # inertial reference frame (J2000). Dependent columns (5 to 13)
-            propagation_setup.dependent_variable.inertial_to_body_fixed_rotation_frame(
-                body= "davinci"
-            ),
-
-            ### REMOVABLE DEPENDENTS TODO: REMOVE ONCE UNNECESSARY
-            # Stores kepler elements. Columns (-1 to -6) 
-            # NOTE: Verification purposes only.  
-            propagation_setup.dependent_variable.keplerian_state(
-                body= "davinci",
-                central_body= "Earth"
-            )
-
-        ]
-
-        # Retrieves propagation settings.
-        propagation_settings = create_prop_settings(
-            bodies= bodies,
-            initial_state= initial_state,
-            initial_time= starting_time,
-            termination_condition= time_termination_settings,
-            fixed_step_size= time_step,
-            dependent_variables= dependent_variables,
-            atmo_sim= False
-        )
-
-        # Propagate dynamics. 
-        dynamics_simulator = numerical_simulation.create_dynamics_simulator(
-            bodies, 
-            propagation_settings
-        )
-        
-        # Extract state history and dependent variables. 
-        state_history = dynamics_simulator.propagation_results.state_history
-        dependent_history = dynamics_simulator.propagation_results.dependent_variable_history
-        state_array = result2array(state_history)
-        dependent_array = result2array(dependent_history)
-
-
-
-        # Saves values to data files. 
-        # TODO: Rework this into a csv format. 
-        save2txt(
-            solution= state_history, 
-            filename= "state_data.csv",
-            directory= data_dir
-        )
-        save2txt(
-            solution= dependent_history,
-            filename= "dependent_data.csv",
-            directory= data_dir
-        )
 
     ##### POST PROCESSING #####
     # All the stuff here doesn't require propagation, but reads off saved vals. 
@@ -318,6 +228,9 @@ if __name__ == "__main__":
             plt.legend()
             plt.show()
 
+    
+
+
     ######      VERIFICATION
     ### Verified for simple Earth-pointing. 
     if plot_nadir_verification := False:
@@ -383,7 +296,7 @@ if __name__ == "__main__":
         plt.show()
     
     ######      PLOTTING
-    if plot_data := True:
+    if plot_data := False:
 
         #######  Plotting Shenanigans  #######
         # TODO: Put this in its own little python file.  
