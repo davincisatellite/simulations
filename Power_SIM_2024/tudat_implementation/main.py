@@ -75,58 +75,112 @@ if __name__ == "__main__":
     # Initial date and time for propagation. 
     propStartISO = "2025-06-21T07:00:00.000000"
     # Defines total propagation time in hours. 
-    propDurationTime = 6.0
+    propDurationTime = 5.0
     # Defines constant time step in seconds. 
     timeStep = 20.0
 
-    # Defines initial keplerian orbital elements. 
-    stateStartKep = np.array([
-        6.885e6,                # Semi-major axis [m]
-        0.015,                  # eccentricity 
-        np.deg2rad(98),         # Inclination [rads]. Degrees in ().
-        np.deg2rad(0),          # arg of periapsis [rads]
-        np.deg2rad(0),          # longitude of ascending node [rads]
-        np.deg2rad(0),          # true anomaly [rads]
-    ])
+    # Simulation range for orbital power averages. 
+    semiMajorVals = np.linspace(start= 6820e3, stop= 6920e3, num= 6)     
+    eccVals = np.linspace(start= 0.00, stop= 0.015, num= 6)
+    incVals = np.linspace(start= 90.0, stop= 110.0, num= 6)
 
-    stateHistory, dependentHistory, stateArr, dependentArr = \
-        propagate_orbit(
-            propStartISO= propStartISO, 
-            propDurationTime= propDurationTime,
-            timeStep= timeStep,
-            stateStartKep= stateStartKep,
-            scMass= scMass
+    totalProps = len(semiMajorVals) * len(eccVals) * len(incVals)
+    currentProps = 0
+
+    # Initializes array of average orbital values. 
+    orbitAverages = np.empty((len(semiMajorVals), len(eccVals), len(incVals)))
+
+    ### Propagation-related defitions. 
+    if propOrbits := True:
+        # Defines simulation start date and time (UTC). (YYYY-MM-DDTHH:MM:SS)
+        pythonDate = datetime.fromisoformat(propStartISO)
+        # Converts into tudat time format. 
+        tudatDate = time_conversion.datetime_to_tudat(pythonDate)
+        # Defines initial time as seconds since J2000. 
+        propStartTime = tudatDate.epoch()
+
+        # Creates environment bodies. 
+        bodies = create_bodies(
+            sc_mass= scMass,
+            initial_att= np.eye(3),
+            rotation= True,
+            starting_time= propStartTime,
+            time_step= timeStep
         )
 
-    # Saves values to data files. 
-    # TODO: Rework this into a csv format. 
-    save2txt(
-        solution= stateHistory, 
-        filename= "state_data.csv",
-        directory= data_dir
-    )
-    save2txt(
-        solution= dependentHistory,
-        filename= "dependent_data.csv",
-        directory= data_dir
-    )
+        # TODO: Should be skipped for now, this defines attitude behavior if needed.
+        bodies = create_rotational_settings(
+            bodies= bodies,
+            time_step= timeStep
+        )
 
-    ##### POST PROCESSING #####
-    # All the stuff here doesn't require propagation, but reads off saved vals. 
-    # Turn off propagate if you just wanna mess around with this. 
-    stateArr, dependentArr = read_files()
+        for i,inclination in enumerate(incVals):
+            for j,eccentricity in enumerate(eccVals):
+                for k,semiMajorAxis in enumerate(semiMajorVals):
+                    # Progress indicator. 
+                    currentProps += 1
+                    print(f"Running propagation {currentProps} out of {totalProps}.")
 
-    orbitAvg = orbit_average(
-        stateArr= stateArr,
-        dependentArr= dependentArr, 
-        tumblingPowers= tumblingPowers,
-        tumblingCheck= True,
-    )
+                    # Defines initial keplerian orbital elements. 
+                    stateStartKep = np.array([
+                        semiMajorAxis,          # Semi-major axis [m]
+                        eccentricity,           # eccentricity 
+                        inclination,            # Inclination [rads]. Degrees in ().
+                        np.deg2rad(0),          # arg of periapsis [rads]
+                        np.deg2rad(0),          # longitude of ascending node [rads]
+                        np.deg2rad(0),          # true anomaly [rads]
+                    ])
 
-    print(f"Tumbling power production average: {tumblingPowers} W")
-    print(f"Orbit average power: {orbitAvg} W")
+                    # Propagates orbit. 
+                    stateHistory, dependentHistory, stateArr, dependentArr = \
+                        propagate_orbit(
+                            propDurationTime= propDurationTime,
+                            timeStep= timeStep,
+                            stateStartKep= stateStartKep,
+                            propStartTime= propStartTime,
+                            bodies= bodies
+                        )
+                    
+                    # Returns orbit average. 
+                    orbitAvg = orbit_average(
+                        stateArr= stateArr,
+                        dependentArr= dependentArr, 
+                        tumblingPowers= tumblingPowers,
+                        tumblingCheck= True,
+                    )
 
-        ### Battery charge operations ###
+                    # Saves orbit average. 
+                    orbitAverages[k,j,i] = orbitAvg
+
+            # Dumps orbital averages to csv file. 
+            filename = f"data/orbit_averages/orbit_avg_inclination{inclination}.csv"
+            np.savetxt(filename, orbitAverages[:,:,i], delimiter= ",")
+
+    ### Plots power average data. 
+    
+    if plotAvgs := True:
+        for i, inclination in enumerate(incVals):
+            # Reads data from saved csv files. 
+            dataDir = f"data/orbit_averages/orbit_avg_inclination{inclination}.csv"
+            data = np.genfromtxt(dataDir, delimiter= ",")
+
+            fig, ax = plt.subplots()
+            im = ax.imshow(data)    
+
+            ax.set_yticks(range(len(semiMajorVals)), labels=semiMajorVals,
+                rotation=45, ha="right", rotation_mode="anchor")
+            ax.set_xticks(range(len(eccVals)), labels=np.round(eccVals,3))
+
+            # Create colorbar
+            cbar = ax.figure.colorbar(im, ax=ax)
+            cbar.ax.set_ylabel("Power [W]", rotation=-90, va="bottom")
+
+            fig.suptitle(f"Inclination {inclination}º")
+
+            fig.savefig(f"data/orbit_plots/inclination_{inclination}.png")
+
+
+    ### Battery charge operations ###
 
     if batteryChargeCheck := False:
         # Initializes empty battery charge array. 

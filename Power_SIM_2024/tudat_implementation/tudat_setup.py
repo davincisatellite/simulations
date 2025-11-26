@@ -222,44 +222,24 @@ def create_rotational_settings(
 
 
 def propagate_orbit(
-        propStartISO: str, 
         propDurationTime: float,
         timeStep: float, 
         stateStartKep: np.array,
-        scMass: float,
-        initialAtt: np.array = np.eye(3),
+        propStartTime,
+        bodies
+
 ):
-        
-    ### Propagation-related defitions. 
-    # Defines simulation start date and time (UTC). (YYYY-MM-DDTHH:MM:SS)
-    pythonDate = datetime.fromisoformat(propStartISO)
-    # Converts into tudat time format. 
-    tudatDate = time_conversion.datetime_to_tudat(pythonDate)
-    # Defines initial time as seconds since J2000. 
-    propStartTime = tudatDate.epoch()
 
-     # Creates environment bodies. 
-    bodies = create_bodies(
-        sc_mass= scMass,
-        initial_att= initialAtt,
-        rotation= True,
-        starting_time= propStartTime,
-        time_step= timeStep
+    """ # Converts to Mean Equinocial Elems to sort out eccentricity = 0 issues. 
+    stateStartMee = element_conversion.keplerian_to_mee(
+        keplerian_elements= stateStartKep
     )
-
-    bodies = create_rotational_settings(
-        bodies= bodies,
-        time_step= timeStep
-        )
-
+ """
     # Defines initial state from keplerian orbital parameters. 
-    initial_state = element_conversion.keplerian_to_cartesian(
+    stateStartCartesian = element_conversion.keplerian_to_cartesian(
         keplerian_elements= stateStartKep, 
         gravitational_parameter= bodies.get("Earth").gravitational_parameter
     )
-
-    ##### PROPAGATION #####
-    # This section propagates the actual orbit to the desired stop time. 
 
     # Creates propagation termination settings. 
     time_termination_settings = propagation_setup.propagator.time_termination(
@@ -299,7 +279,7 @@ def propagate_orbit(
     # Retrieves propagation settings.
     propagation_settings = create_prop_settings(
         bodies= bodies,
-        initial_state= initial_state,
+        initial_state= stateStartCartesian,
         initial_time= propStartTime,
         termination_condition= time_termination_settings,
         fixed_step_size= timeStep,
@@ -319,6 +299,19 @@ def propagate_orbit(
 
     stateArr = result2array(stateHistory)
     dependentArr = result2array(dependentHistory)
+
+    # Might be useful if you want to save this data at some point in the future. 
+    """ # Saves values to data files.  
+    save2txt(
+        solution= stateHistory, 
+        filename= "state_data.csv",
+        directory= data_dir
+    )
+    save2txt(
+        solution= dependentHistory,
+        filename= "dependent_data.csv",
+        directory= data_dir
+    ) """
 
     return stateHistory, dependentHistory, stateArr, dependentArr
 

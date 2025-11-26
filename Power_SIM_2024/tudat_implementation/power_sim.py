@@ -84,10 +84,12 @@ def orbit_average(
     # Imports true anomaly values. 
     trueAnomaly = dependentArr[:,-1] * 180/np.pi
 
-    # Finds closest index to 360º (One orbit) 
-    indx = (np.abs(trueAnomaly - 360)).argmin()
+    # Finds indices close to 360º within a margin (1.5º)
+    indx = np.argwhere(np.abs(trueAnomaly - 360) < 5)
 
-    # Calculates average of power production through orbit. 
-    orbitAvg = np.average(powerSolar[:indx])
+    # Calculates average of power production through orbit considering the 
+    # last index in the array. Should ensure same number of orbits considered
+    # for all averages. 
+    orbitAvg = np.average(powerSolar[:indx[-1,0]])
 
     return orbitAvg
