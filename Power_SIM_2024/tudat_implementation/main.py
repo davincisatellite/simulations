@@ -11,15 +11,8 @@ can/should be expanded):
 - Tomás Reis (2025) - tomas.qreis@gmail.com
 """
 
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-
-from tudatpy import numerical_simulation
-from tudatpy.interface import spice
-from tudatpy.astro import element_conversion, time_conversion
-from tudatpy.util import result2array
-from tudatpy.data import save2txt
+import os
 
 from tudat_setup import * 
 from assist_functions import *
@@ -28,13 +21,13 @@ from modes import *
 
 from datetime import datetime
 
-
-# Load tudat spice kernels.
-spice.load_standard_kernels()
-
-
-
 if __name__ == "__main__":
+
+    dataDir = f"data/"
+
+    # Reads run count.
+    with open("runcount.txt", "r") as f:
+        runCount = int(f.read())
 
     # Check value for using tumbling for power calculations instead of specific
     # attitude power. 
@@ -45,9 +38,11 @@ if __name__ == "__main__":
     scMass = 2.8
 
     # Creates solar array distribution as: [+X, -X, +Y, -Y, +Z, -Z]
+    # baseSolarArray = [4 * solar_cell, 4 * solar_cell, 4 * solar_cell,
+    #               4 * solar_cell, 2 * solar_cell, 2 * solar_cell]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solarArray = [4*solar_cell, 4*solar_cell, 4*solar_cell, 
+    solarArray = [4*solar_cell, 4*solar_cell, 4*solar_cell,
                    4*solar_cell, 2*solar_cell, 2*solar_cell]
     
     # Total tumbling power based on the sphere of quaternions method in
@@ -80,18 +75,46 @@ if __name__ == "__main__":
     timeStep = 20.0
 
     # Simulation range for orbital power averages. 
-    semiMajorVals = np.linspace(start= 6820e3, stop= 6920e3, num= 6)     
-    eccVals = np.linspace(start= 0.00, stop= 0.015, num= 6)
-    incVals = np.linspace(start= 90.0, stop= 110.0, num= 6)
+    semiMajorVals = np.linspace(start= 6720e3, stop= 6920e3, num= 21)
+    eccVals = np.linspace(start= 0.00, stop= 0.015, num= 2)
+    incVals = np.linspace(start= 60.0, stop= 120.0, num= 21)
 
     totalProps = len(semiMajorVals) * len(eccVals) * len(incVals)
     currentProps = 0
 
     # Initializes array of average orbital values. 
-    orbitAverages = np.empty((len(semiMajorVals), len(eccVals), len(incVals)))
+    orbitAverages = np.empty((len(semiMajorVals), len(incVals), len(eccVals)))
 
-    ### Propagation-related defitions. 
-    if propOrbits := True:
+    # Initializes current run directories.
+    runDir = dataDir + f"run_num_{runCount}/"
+    valuesDir = dataDir + f"run_num_{runCount}/orbit_averages/"
+    plotsDir = dataDir + f"run_num_{runCount}/plots/"
+
+    ### Propagation-related definitions.
+    if propOrbits := False:
+        # Increases runcount.
+        runCount += 1
+        # Initializes current run directories.
+        runDir = dataDir + f"run_num_{runCount}/"
+        valuesDir = dataDir + f"run_num_{runCount}/orbit_averages/"
+        plotsDir = dataDir + f"run_num_{runCount}/plots/"
+        # Updates runcount file.
+        with open("runcount.txt", "w") as f:
+            f.write('%d' % runCount)
+
+        # Creates run directories.
+        os.mkdir(runDir)
+        os.mkdir(valuesDir)
+        os.mkdir(plotsDir)
+
+        # Saves solar panels and tumbling average powers file.
+        tumblingArr = np.zeros(np.size(solarArray))
+        tumblingArr[0] = tumblingPowers[0]
+        firstLine = np.array(["Tumbling Power", "Solar Panels"])
+        saveArr = np.vstack((firstLine, np.column_stack((tumblingArr, solarArray))))
+
+        np.savetxt(valuesDir + 'sim_params.txt', saveArr, delimiter=',', fmt="%s")
+
         # Defines simulation start date and time (UTC). (YYYY-MM-DDTHH:MM:SS)
         pythonDate = datetime.fromisoformat(propStartISO)
         # Converts into tudat time format. 
@@ -114,8 +137,9 @@ if __name__ == "__main__":
             time_step= timeStep
         )
 
-        for i,inclination in enumerate(incVals):
-            for j,eccentricity in enumerate(eccVals):
+
+        for i, eccentricity in enumerate(eccVals):
+            for j,inclination in enumerate(incVals):
                 for k,semiMajorAxis in enumerate(semiMajorVals):
                     # Progress indicator. 
                     currentProps += 1
@@ -152,32 +176,20 @@ if __name__ == "__main__":
                     # Saves orbit average. 
                     orbitAverages[k,j,i] = orbitAvg
 
-            # Dumps orbital averages to csv file. 
-            filename = f"data/orbit_averages/orbit_avg_inclination{inclination}.csv"
+            # Dumps orbital averages to csv file.
+            filename = valuesDir + f"orbit_avg_eccentricity{eccentricity}.csv"
             np.savetxt(filename, orbitAverages[:,:,i], delimiter= ",")
 
     ### Plots power average data. 
     # TODO: Put this in its own separate function. 
     if plotAvgs := True:
-        for i, inclination in enumerate(incVals):
-            # Reads data from saved csv files. 
-            dataDir = f"data/orbit_averages/orbit_avg_inclination{inclination}.csv"
-            data = np.genfromtxt(dataDir, delimiter= ",")
-
-            fig, ax = plt.subplots()
-            im = ax.imshow(data)    
-
-            ax.set_yticks(range(len(semiMajorVals)), labels=semiMajorVals,
-                rotation=45, ha="right", rotation_mode="anchor")
-            ax.set_xticks(range(len(eccVals)), labels=np.round(eccVals,3))
-
-            # Create colorbar
-            cbar = ax.figure.colorbar(im, ax=ax)
-            cbar.ax.set_ylabel("Power [W]", rotation=-90, va="bottom")
-
-            fig.suptitle(f"Inclination {inclination}º")
-
-            fig.savefig(f"data/orbit_plots/inclination_{inclination}.png")
+        plot_average_heatmap(
+            eccVals= eccVals,
+            incVals= incVals,
+            semiMajorVals= semiMajorVals,
+            dataDir= dataDir,
+            runCount= 4
+        )
 
 
     ### Battery charge operations ###
@@ -185,7 +197,7 @@ if __name__ == "__main__":
     if batteryChargeCheck := False:
         # Initializes empty battery charge array. 
         batt_current = np.zeros(np.size(times))
-        batt_current[0] = batt_start
+        batt_current[0] = battStart
 
         # Placeholder. Defines starting mode as the "active" mode. 
         # TODO: replace with a more accurate starting mode. 
@@ -221,7 +233,7 @@ if __name__ == "__main__":
             powerNet = powerSolar[i] - modeCurrent.powerDrain
 
             # Computes produced energy in step, adds to current batt charge. 
-            charge = (powerNet * time_step) / 60**2      # [W*h]
+            charge = (powerNet * timeStep) / 60**2      # [W*h]
             
             batt_new = batt_old + charge
 

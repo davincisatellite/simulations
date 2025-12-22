@@ -1,14 +1,19 @@
 import numpy as np
 import math
 
-
+from tudatpy.interface import spice
+from tudatpy.util import result2array
+from tudatpy.data import save2txt
 from tudatpy import numerical_simulation
-from tudatpy.numerical_simulation import (environment, environment_setup, \
+from tudatpy.dynamics import (environment, environment_setup, \
     propagation_setup)
 from tudatpy.astro import element_conversion, time_conversion
 from tudatpy.util import result2array
 
 from datetime import datetime
+
+# Load tudat spice kernels.
+spice.load_standard_kernels()
 
 # Defines common directories. 
 data_dir = "./data/"
