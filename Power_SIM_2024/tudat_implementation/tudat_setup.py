@@ -18,12 +18,7 @@ spice.load_standard_kernels()
 # Defines common directories. 
 data_dir = "./data/"
 
-# Defines origin of global reference frame. 
-global_frame_origin = "Earth"
-global_frame_orientation = "J2000"
 
-# Defines central body of simulation. 
-central_body = ["Earth"]
 
 # TODO: Understand what variables are actually necessary here. 
 def create_bodies(
@@ -55,6 +50,10 @@ def create_bodies(
         "Sun"
     ]
 
+    # Defines origin of global reference frame.
+    global_frame_origin = "Earth"
+    global_frame_orientation = "J2000"
+
     # Creates default body settings. 
     body_settings = environment_setup.get_default_body_settings(
         bodies_to_create, global_frame_origin, global_frame_orientation
@@ -85,8 +84,8 @@ def create_bodies(
     drag_coefficient = 1.2
 
     # Defines solar occulting bodies.
-    occulting_bodies = dict()
-    occulting_bodies["Sun"] = ["Earth"]
+    occultingBodies = dict()
+    occultingBodies["Sun"] = ["Earth"]
 
     # Defines vehicle solar radiation pressure properties. 
     # NOTE: Not necessary for occultation. Using compute_shadow_function is, 
@@ -94,7 +93,7 @@ def create_bodies(
     ref_area_srp = 100
     rad_press_coeff = 1.2
     vehicle_target_settings = environment_setup.radiation_pressure.cannonball_radiation_target(
-        ref_area_srp, rad_press_coeff, occulting_bodies
+        ref_area_srp, rad_press_coeff, occultingBodies
         )
     body_settings.get("davinci").radiation_pressure_target_settings = vehicle_target_settings
 
@@ -146,6 +145,9 @@ def create_prop_settings(
 
     # Define bodies that are propagated, and their central bodies of propagation.
     bodies_to_propagate = ["davinci"]
+
+    # Defines central body of simulation.
+    central_body = ["Earth"]
     
     # TODO: Figure out better spherical harmonic degrees to use. 
     # Checks whether atmospheric sims will be performed. 
@@ -305,19 +307,6 @@ def propagate_orbit(
     stateArr = result2array(stateHistory)
     dependentArr = result2array(dependentHistory)
 
-    # Might be useful if you want to save this data at some point in the future. 
-    """ # Saves values to data files.  
-    save2txt(
-        solution= stateHistory, 
-        filename= "state_data.csv",
-        directory= data_dir
-    )
-    save2txt(
-        solution= dependentHistory,
-        filename= "dependent_data.csv",
-        directory= data_dir
-    ) """
-
     return stateHistory, dependentHistory, stateArr, dependentArr
 
     
@@ -374,4 +363,3 @@ class nadir_pointing:
 
             # Updates time. 
             self.current_time = current_time
-    

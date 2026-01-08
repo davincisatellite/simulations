@@ -24,18 +24,32 @@ def plot_average_heatmap(
         incVals: npt.NDArray,
         semiMajorVals: npt.NDArray,
         dataDir: str,
-        runCount: int
+        runCount: int,
+        powerReq: float= 4.0,
+        showUncompliant: bool= False,
 ):
     valuesDir = dataDir + f"run_num_{runCount}/orbit_averages/"
     plotsDir = dataDir + f"run_num_{runCount}/plots/"
+
+    plt.rcParams.update({'font.size': 14})
 
     for i, eccentricity in enumerate(eccVals):
         # Reads data from saved csv files.
         importDir = valuesDir + f"orbit_avg_eccentricity{eccentricity}.csv"
         data = np.genfromtxt(importDir, delimiter=",")
 
+        # Creates array of ratio to required power.
+        alphaArr = data/powerReq
+        alphaArr[alphaArr < 1.0] = 0
+        alphaArr[alphaArr >= 1.0] = 1
+
         fig, ax = plt.subplots()
-        im = ax.imshow(data)
+
+        # Checks whether we want to see uncompliant (<100% of 4W) results.
+        if showUncompliant:
+            im = ax.imshow(data / powerReq * 100)
+        else:
+            im = ax.imshow(data/powerReq * 100, vmin= 100, alpha= alphaArr)
 
         # Creates xticks for semiMajor. Assigns every third an empty space to make it more readable.
         yTicks = np.array(semiMajorVals*1e-3, dtype=str)       # km
@@ -54,7 +68,7 @@ def plot_average_heatmap(
 
         # Create colorbar
         cbar = ax.figure.colorbar(im, ax=ax)
-        cbar.ax.set_ylabel("Power [W]", rotation=-90, va="bottom")
+        cbar.ax.set_ylabel("% of 4W Average", rotation=-90, va="bottom")
 
         fig.suptitle(f"Eccentricity {eccentricity}")
 

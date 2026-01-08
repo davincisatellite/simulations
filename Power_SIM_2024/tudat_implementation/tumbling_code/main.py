@@ -17,27 +17,8 @@ Assumptions and units stuff.
 - All other units in SI. NOTE: This means radians.
 """
 
-# New method for tumbling. Creates a bunch of quaternions, transforms them
-# into rotation matrices and takes these as a set of attitudes. 
-def random_quaternion_tumbling(solarArray, numAttitudes = 2000,
-                                randomAvg = True, randomSet = False):
-    # Generate random set of atttiudes. 
-    random_atts = att.generate_random_attitudes(numAttitudes)
-
-    # Initializes empty power vector.
-    powersRand = np.empty(0)
-
-    for att_index in range(numAttitudes):
-        # Calculate power produced in each attitude. 
-        if randomAvg:
-            powersRand = np.append(powersRand, att.power_output(
-                random_atts[att_index], solarArray))
-
-    powersRand = np.average(powersRand)
-
-    return powersRand
-
-if __name__ == "__main__":
+# NOTE: Old code. Ignore... 
+""" if __name__ == "__main__":
     ###########################################################################
     # ORBITAL STUFF ###########################################################
     ###########################################################################
@@ -211,7 +192,7 @@ if __name__ == "__main__":
 
     # Just some plotting for fun. 
     # Feel free to disable if you don't like spaghetti. :)
-    if tumbling_spaghetti := False:
+    if tumbling_spaghetti := False: 
         fig = plt.figure(figsize=(15,8), dpi=80)
 
         ax = fig.add_subplot(1, 1, 1)
@@ -224,7 +205,7 @@ if __name__ == "__main__":
         ax.grid()
 
         #plt.legend()
-        plt.show()
+        plt.show()"""
 
 
 
