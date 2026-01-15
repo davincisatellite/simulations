@@ -188,8 +188,8 @@ if __name__ == "__main__":
             incVals= incVals,
             semiMajorVals= semiMajorVals,
             dataDir= dataDir,
-            runCount= 4,
-            showUncompliant= True
+            runCount= 5,
+            showUncompliant= False
         )
 
 

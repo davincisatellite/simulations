@@ -5,7 +5,7 @@ from tudatpy.interface import spice
 from tudatpy.util import result2array
 from tudatpy.data import save2txt
 from tudatpy import numerical_simulation
-from tudatpy.dynamics import (environment, environment_setup, \
+from tudatpy.numerical_simulation import (environment, environment_setup, \
     propagation_setup)
 from tudatpy.astro import element_conversion, time_conversion
 from tudatpy.util import result2array
