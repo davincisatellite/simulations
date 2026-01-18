@@ -14,6 +14,8 @@ can/should be expanded):
 import matplotlib.pyplot as plt
 import os
 
+import numpy as np
+
 from tudat_setup import * 
 from assist_functions import *
 from power_sim import *
@@ -73,6 +75,8 @@ if __name__ == "__main__":
     propDurationTime = 5.0
     # Defines constant time step in seconds. 
     timeStep = 20.0
+    # Creates times array.
+    times = np.arange(start= 0.0, stop= propDurationTime*60**2, step= timeStep)
 
     # Simulation range for orbital power averages. 
     semiMajorVals = np.linspace(start= 6720e3, stop= 6920e3, num= 21)
@@ -192,8 +196,60 @@ if __name__ == "__main__":
             showUncompliant= False
         )
 
-
     ### Battery charge operations ###
+    runCount = 5
+
+    valuesDir = dataDir + f"run_num_{runCount}/orbit_averages/"
+    plotsDir = dataDir + f"run_num_{runCount}/plots/"
+
+    # Initializes mode as idle.
+    activeMode = modeIdle
+
+    for time in times:
+
+        # Power production.
+
+        # Subtract power demand from production.
+
+        # Update battery charge.
+
+        # Mode check.
+        # TODO: Check if the timers for the off modes are still being incremented.
+        if activeMode.name == "idle":
+            # Checks for comms condition.
+            if modeComms.check_active(
+                conditionsCurrent = ...,
+                timeStep= timeStep
+            ):  activeMode = modeComms
+
+            # Checks for payload condition.
+            elif modePayload.check_active(
+                conditionsCurrent=...,
+                timeStep=timeStep
+            ):  activeMode = modePayload
+
+            else: activeMode = modeIdle
+        else:
+            if activeMode.check_active(
+                conditionsCurrent=...,
+                timeStep=timeStep
+            ):
+                activeMode = activeMode
+            else:
+                activeMode = modeIdle
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     if batteryChargeCheck := False:
         # Initializes empty battery charge array. 

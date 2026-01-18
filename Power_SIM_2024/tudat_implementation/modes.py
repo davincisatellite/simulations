@@ -7,11 +7,98 @@ safeKey = 'safe'
 activeKey = 'active'            # Placeholder
 
 
+class conditionsDict(dict):
+    _keys = "batteryCharge sunlit timeSinceActive timeSinceLastActive".split()
+    def __init__(self, valtype= int):
+        for key in conditionsDict._keys:
+            self[key] = valtype()
+    def __setitem__(self, key, value):
+        if key not in conditionsDict._keys:
+            raise KeyError
+        dict.__setitem__(self, key, value)
+
+
+class mode:
+    """Mode class. Defines the mode and conditions for switching to."""
+    def __init__(self,
+                 modeName: str,
+                 powerActive: float,
+                 activeConditions: conditionsDict
+                 ):
+        """Initializes mode.
+        Args:
+        - modeName: string. Name of the mode.
+        - powerActive: float. Active power of mode in W.
+        - powerPassive: float. Passive power of mode in W.
+        - activeConditions: conditionsDict. Dictionary of conditions for being active."""
+
+        self.name = modeName
+        self.powerActive = powerActive
+        self.activeConditions = activeConditions
+        self.isActive = False
+        self.timeSinceActive = 0.0
+        self.timeSinceLastActive = 0.0
+
+    # TODO: Problem with current implementation is two modes can be active at the same time.
+    def check_active(self,
+                     conditionsCurrent: conditionsDict,
+                     timeStep: float):
+        """Checks if conditions for mode to be active are met.
+        Args:
+        - conditionsCurrent: conditionsDict. Dictionary of current conditions.
+        - timeStep: float. Time step of simulation.
+        """
+        # Initializes an array of booleans.
+        # TODO: This can be made into some variable that actually tells you what condition/s are failing.
+        activeChecklist = [False] * len(self.activeConditions)
+        i = 0
+
+        # loops through conditions.
+        for key, value in self.activeConditions:
+            if key == "timeSinceActive":
+                if conditionsCurrent[key] < value:
+                    activeChecklist[i] = True
+            else:
+                if conditionsCurrent[key] > value:
+                    activeChecklist[i] = True
+            i =+ 1
+
+        # Checks if all elements of checklist are true.
+        if all(activeChecklist):
+            # Checks if mode was previously not active.
+            if not self.isActive:
+                self.isActive = True
+                self.timeSinceActive = 0.0
+            else:
+                self.timeSinceActive += timeStep
+            return True
+        else:
+            # Checks if mode was previously active.
+            if self.isActive:
+                # Switches mode off and resets counters.
+                self.isActive = False
+                self.timeSinceActive = 0.0
+                self.timeSinceLastActive = 0.0
+            else:
+                # Increases time since last active count.
+                self.timeSinceLastActive += timeStep
+            return False
+
+
+
+
+
+
+
+
+
+
+
 class active_mode: 
     """Mode class.
     Args:
     - batteryCond: battery charge condition for mode to be active.
-    - sunlightCond: sunlit condtion for mode to be active.  
+    - sunlightCond: sunlit condition for mode to be active.
     - powerDrain: float. Power drain of mode in W. 
     """
     def __init__(self, modeName:str, batteryCond=0.0 , sunlightCond=False,
@@ -65,7 +152,7 @@ class safe_mode:
     - sunlightCond: 
     - powerDrain: float. Power drain of mode in W. 
     """
-    def __init__(self, modeName:str, batteryCond=0.0 , sunlightCond=False,
+    def __init__(self, modeName:str, batteryCond=0.0, sunlightCond=False,
                  powerDrain=0.0):
         
         self.name = modeName
