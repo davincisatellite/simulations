@@ -59,7 +59,7 @@ class mode:
                 if conditionsCurrent[key] < value:
                     activeChecklist[i] = True
             else:
-                if conditionsCurrent[key] > value:
+                if conditionsCurrent[key] >= value:
                     activeChecklist[i] = True
             i =+ 1
 
@@ -85,7 +85,33 @@ class mode:
             return False
 
 
+payloadConditions = conditionsDict()
 
+payloadConditions["batteryCharge"] = 100
+payloadConditions["sunlit"] = 1.0
+payloadConditions["timeSinceActive"] = 100
+payloadConditions["timeSinceLastActive"] = 1000
+
+
+modePayload = mode(
+    modeName= "payload",
+    powerActive= 10.0,
+    activeConditions= payloadConditions
+)
+
+currentConditions = conditionsDict()
+
+currentConditions["batteryCharge"] = 1000
+currentConditions["sunlit"] = 1.0
+currentConditions["timeSinceActive"] = 100
+currentConditions["timeSinceLastActive"] = 1000
+
+
+
+modePayload.check_active(
+    conditionsCurrent= ,
+    timeStep= 10.0
+)
 
 
 

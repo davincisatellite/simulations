@@ -205,7 +205,7 @@ if __name__ == "__main__":
     # Initializes mode as idle.
     activeMode = modeIdle
 
-    for time in times:
+    for idx, time in enumerate(times):
 
         # Power production.
 
