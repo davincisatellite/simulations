@@ -20,6 +20,13 @@ class conditionsDict(dict):
             raise KeyError
         dict.__setitem__(self, key, value)
 
+### Example of mode active conditions initialization.
+"""exampleConditions = conditionsDict()
+
+exampleConditions["batteryCharge"] = 100
+exampleConditions["sunlit"] = 1.0
+exampleConditions["timeSinceActive"] = 100
+exampleConditions["timeSinceLastActive"] = 1000"""
 
 class mode:
     """Mode class. Defines the mode and conditions for switching to."""
@@ -31,8 +38,7 @@ class mode:
         """Initializes mode.
         Args:
         - modeName: string. Name of the mode.
-        - powerActive: float. Active power of mode in W.
-        - powerPassive: float. Passive power of mode in W.
+        - powerActive: float. Power consumption while mode is active.
         - activeConditions: conditionsDict. Dictionary of conditions for being active."""
 
         self.name = modeName
@@ -41,6 +47,42 @@ class mode:
         self.isActive = False
         # Time of activation given by simulation time.
         self.timeActivated = 0.0
+
+    def check_runtime(self,
+                      currentTime):
+        # Checks whether mode was previously set to active.
+        if self.isActive:
+            # If so, checks the active duration condition.
+            # If condition > current time - time of last activation; mode can keep running.
+            if self.activeConditions["timeSinceActive"] >= (currentTime - self.timeActivated):
+                return True
+            else:
+                return False
+        else:
+            # If not, checks the time since last activated condition.
+            # If condition < current time - time of last activation; enough time has passed for new activation.
+            if self.activeConditions["timeSinceLastActive"] <= (currentTime - self.timeActivated):
+                return True
+            else:
+                return False
+
+    def check_sunlit(self,
+                    sunlit):
+        # Checks sunlit condition.
+        # If sunlit state above condition, mode keeps running.
+        if self.activeConditions["sunlit"] <= sunlit:
+            return True
+        else:
+            return False
+
+    def check_battery(self,
+                      batteryCharge):
+        # Checks battery condition.
+        # If battery charge above condition, mode keeps running.
+        if self.activeConditions["batteryCharge"] <= batteryCharge:
+            return True
+        else:
+            return False
 
     # TODO: Problem with current implementation is two modes can be active at the same time.
     def check_active(self,
@@ -55,49 +97,11 @@ class mode:
 
         # Initializes an array of booleans.
         # TODO: This can be made into some variable that actually tells you what condition/s are failing.
-        activeChecklist = [False] * (len(self.activeConditions)-1)
-        i = 0
+        activeChecklist = [False] * 3
 
-        # Checks whether mode was previously set to active.
-        if self.isActive:
-            # If so, checks the active duration condition.
-            # If condition > current time - time of last activation; mode can keep running.
-            if self.activeConditions["timeSinceActive"] >= (currentTime - self.timeActivated):
-                activeChecklist[0] = True
-            else:
-                activeChecklist[0] = False
-        else:
-            # If not, checks the time since last activated condition.
-            # If condition < current time - time of last activation; enough time has passed for new activation.
-            if self.activeConditions["timeSinceLastActive"] <= (currentTime - self.timeActivated):
-                activeChecklist[0] = True
-            else:
-                activeChecklist[0] = False
-
-        # Checks battery condition.
-        # If battery charge above condition, mode keeps running.
-        if self.activeConditions["batteryCharge"] <= batteryCharge:
-            activeChecklist[1] = True
-        else:
-            activeChecklist[1] = False
-
-        # Checks sunlit condition.
-        # If sunlit state above condition, mode keeps running.
-        if self.activeConditions["sunlit"] <= sunlit:
-            activeChecklist[2] = True
-        else:
-            activeChecklist[2] = False
-
-        """# TODO: Correct checking
-        # loops through conditions.
-        for key, value in self.activeConditions:
-            if key == "timeSinceActive":
-                if conditionsCurrent[key] < value:
-                    activeChecklist[i] = True
-            else:
-                if conditionsCurrent[key] >= value:
-                    activeChecklist[i] = True
-            i =+ 1"""
+        activeChecklist[0] = self.check_runtime(currentTime= currentTime)
+        activeChecklist[1] = self.check_sunlit(sunlit= sunlit)
+        activeChecklist[2] = self.check_battery(batteryCharge= batteryCharge)
 
         # Checks if all elements of checklist are true.
         if all(activeChecklist):
@@ -115,41 +119,12 @@ class mode:
                 self.isActive = False
             return False
 
-# Example of mode active conditions initialization.
-payloadConditions = conditionsDict()
-
-payloadConditions["batteryCharge"] = 100
-payloadConditions["sunlit"] = 1.0
-payloadConditions["timeSinceActive"] = 100
-payloadConditions["timeSinceLastActive"] = 1000
+    def force_active(self):
+        # Sets mode to active. Used in verification.
+        self.isActive = True
 
 
-modePayload = mode(
-    modeName= "payload",
-    powerActive= 10.0,
-    activeConditions= payloadConditions
-)
-
-currentConditions = conditionsDict()
-
-currentConditions["batteryCharge"] = 1000
-currentConditions["sunlit"] = 1.0
-currentConditions["timeSinceActive"] = 100
-currentConditions["timeSinceLastActive"] = 1000
-
-
-
-modePayload.check_active(
-
-)
-
-
-
-
-
-
-
-
+# TODO: These are all old implementations. Delete when new ones work properly.
 class active_mode: 
     """Mode class.
     Args:
