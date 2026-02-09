@@ -67,19 +67,19 @@ class mode:
                 return False
 
     def check_sunlit(self,
-                    sunlit):
+                     currentSunlit):
         # Checks sunlit condition.
         # If sunlit state above condition, mode keeps running.
-        if self.activeConditions["sunlit"] <= sunlit:
+        if self.activeConditions["sunlit"] <= currentSunlit:
             return True
         else:
             return False
 
     def check_battery(self,
-                      batteryCharge):
+                      currentBatteryCharge):
         # Checks battery condition.
         # If battery charge above condition, mode keeps running.
-        if self.activeConditions["batteryCharge"] <= batteryCharge:
+        if self.activeConditions["batteryCharge"] <= currentBatteryCharge:
             return True
         else:
             return False

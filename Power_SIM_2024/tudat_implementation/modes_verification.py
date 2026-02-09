@@ -2,7 +2,6 @@ from modes import *
 
 import numpy as np
 
-
 # Verifies function of time active condition check
 def test_runtime_check(
         testMode: mode,
@@ -47,11 +46,42 @@ def test_runtime_check(
     if testMode.check_runtime(currentTime= currentTime):
         print("CHECK: Time since active < time activated - current.")
 
+# Verifies function of battery condition check.
+def test_battery_check(
+        testMode: mode,
+        currentBatteryCharge: float,
+):
+    # Prints relevant values.
+    print(currentBatteryCharge)
+    print(testMode.activeConditions["batteryCharge"])
+    if testMode.check_battery(currentBatteryCharge= currentBatteryCharge):
+        print("CHECK: Current battery > Battery requirement")
+
+    # Sets battery to below condition.
+    currentBattery = testMode.activeConditions["batteryCharge"] - 1.0
+    print(currentBattery)
+    print(testMode.activeConditions["batteryCharge"])
+    if not testMode.check_battery(currentBatteryCharge= currentBatteryCharge):
+        print("CHECK: Current battery < Battery requirement")
+
+# Verifies sunlit condition check.
+def test_sunlit_check(
+        testMode: mode,
+        currentSunlit: float,
+):
+    # Prints relevant values.
+    print(currentSunlit)
+    print(testMode.activeConditions["sunlit"])
+    if testMode.check_sunlit(currentSunlit=currentSunlit):
+        print("CHECK: Current sunlit > Sunlit requirement")
+    if not testMode.check_sunlit(currentSunlit= 0.99):
+        print("CHECK: Detects current sunlit < requirement")
+
 
 # Initializes verification modes.
 testModeConditions = conditionsDict()
 
-testModeConditions["batteryCharge"] = 100
+testModeConditions["batteryCharge"] = 5.0
 testModeConditions["sunlit"] = 1.0
 testModeConditions["timeSinceActive"] = 100
 testModeConditions["timeSinceLastActive"] = 1000
@@ -72,15 +102,29 @@ sunlit          = np.ones(len(times))
 batteryMax      = 45                    # Watt*h
 batteryStart    = batteryMax/2
 
+
 # Verifies runtime check.
-print("===== RUNTIME VERIFICATION =====")
-test_runtime_check(
-    testMode        =modeTest,
-    currentTime     =1250.0,
-)
+if runtimeVerification := False:
+    print("===== RUNTIME VERIFICATION =====")
+    test_runtime_check(
+        testMode        =modeTest,
+        currentTime     =1250.0,
+    )
 
-print("===== BATTERY VERIFICATION =====")
 
-print("===== SUNLIT VERIFICATION =====")
+if batteryVerification := False:
+    print("===== BATTERY VERIFICATION =====")
+    test_battery_check(
+        testMode        =modeTest,
+        currentBatteryCharge  =10.0
+    )
 
-print("===== OVERALL CHECK VERIFICATION =====")
+if sunlitVerification := False:
+    print("===== SUNLIT VERIFICATION =====")
+    test_sunlit_check(
+        testMode        =modeTest,
+        currentSunlit  =1.0
+    )
+
+if overallVerification := True:
+    print("===== OVERALL CHECK VERIFICATION =====")
