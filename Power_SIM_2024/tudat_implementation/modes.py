@@ -8,6 +8,9 @@ activeKey = 'active'            # Placeholder
 
 
 class conditionsDict(dict):
+    """Dictionary of conditions for mode to be active. A dictionary of preset keys for use in mode
+    switching conditions.
+    """
     _keys = "batteryCharge sunlit timeSinceActive timeSinceLastActive".split()
     def __init__(self, valtype= int):
         for key in conditionsDict._keys:
@@ -36,23 +39,56 @@ class mode:
         self.powerActive = powerActive
         self.activeConditions = activeConditions
         self.isActive = False
-        self.timeSinceActive = 0.0
-        self.timeSinceLastActive = 0.0
+        # Time of activation given by simulation time.
+        self.timeActivated = 0.0
 
     # TODO: Problem with current implementation is two modes can be active at the same time.
     def check_active(self,
-                     conditionsCurrent: conditionsDict,
-                     timeStep: float):
+                     batteryCharge: float,
+                     sunlit: float,
+                     currentTime: float):
         """Checks if conditions for mode to be active are met.
         Args:
         - conditionsCurrent: conditionsDict. Dictionary of current conditions.
         - timeStep: float. Time step of simulation.
         """
+
         # Initializes an array of booleans.
         # TODO: This can be made into some variable that actually tells you what condition/s are failing.
-        activeChecklist = [False] * len(self.activeConditions)
+        activeChecklist = [False] * (len(self.activeConditions)-1)
         i = 0
 
+        # Checks whether mode was previously set to active.
+        if self.isActive:
+            # If so, checks the active duration condition.
+            # If condition > current time - time of last activation; mode can keep running.
+            if self.activeConditions["timeSinceActive"] >= (currentTime - self.timeActivated):
+                activeChecklist[0] = True
+            else:
+                activeChecklist[0] = False
+        else:
+            # If not, checks the time since last activated condition.
+            # If condition < current time - time of last activation; enough time has passed for new activation.
+            if self.activeConditions["timeSinceLastActive"] <= (currentTime - self.timeActivated):
+                activeChecklist[0] = True
+            else:
+                activeChecklist[0] = False
+
+        # Checks battery condition.
+        # If battery charge above condition, mode keeps running.
+        if self.activeConditions["batteryCharge"] <= batteryCharge:
+            activeChecklist[1] = True
+        else:
+            activeChecklist[1] = False
+
+        # Checks sunlit condition.
+        # If sunlit state above condition, mode keeps running.
+        if self.activeConditions["sunlit"] <= sunlit:
+            activeChecklist[2] = True
+        else:
+            activeChecklist[2] = False
+
+        """# TODO: Correct checking
         # loops through conditions.
         for key, value in self.activeConditions:
             if key == "timeSinceActive":
@@ -61,30 +97,25 @@ class mode:
             else:
                 if conditionsCurrent[key] >= value:
                     activeChecklist[i] = True
-            i =+ 1
+            i =+ 1"""
 
         # Checks if all elements of checklist are true.
         if all(activeChecklist):
-            # Checks if mode was previously not active.
+            # Checks if mode was previously inactive.
             if not self.isActive:
+                # Sets activated to true.
                 self.isActive = True
-                self.timeSinceActive = 0.0
-            else:
-                self.timeSinceActive += timeStep
+                # Sets time activated to current time.
+                self.timeActivated = currentTime
             return True
         else:
             # Checks if mode was previously active.
             if self.isActive:
-                # Switches mode off and resets counters.
+                # Switches mode off
                 self.isActive = False
-                self.timeSinceActive = 0.0
-                self.timeSinceLastActive = 0.0
-            else:
-                # Increases time since last active count.
-                self.timeSinceLastActive += timeStep
             return False
 
-
+# Example of mode active conditions initialization.
 payloadConditions = conditionsDict()
 
 payloadConditions["batteryCharge"] = 100
@@ -109,8 +140,7 @@ currentConditions["timeSinceLastActive"] = 1000
 
 
 modePayload.check_active(
-    conditionsCurrent= ,
-    timeStep= 10.0
+
 )
 
 
