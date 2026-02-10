@@ -100,8 +100,8 @@ class mode:
         activeChecklist = [False] * 3
 
         activeChecklist[0] = self.check_runtime(currentTime= currentTime)
-        activeChecklist[1] = self.check_sunlit(sunlit= sunlit)
-        activeChecklist[2] = self.check_battery(batteryCharge= batteryCharge)
+        activeChecklist[1] = self.check_sunlit(currentSunlit= sunlit)
+        activeChecklist[2] = self.check_battery(currentBatteryCharge= batteryCharge)
 
         # Checks if all elements of checklist are true.
         if all(activeChecklist):

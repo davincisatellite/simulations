@@ -83,8 +83,8 @@ testModeConditions = conditionsDict()
 
 testModeConditions["batteryCharge"] = 5.0
 testModeConditions["sunlit"] = 1.0
-testModeConditions["timeSinceActive"] = 100
-testModeConditions["timeSinceLastActive"] = 1000
+testModeConditions["timeSinceActive"] = 10
+testModeConditions["timeSinceLastActive"] = 20
 
 modeTest = mode(
     modeName            = "test",
@@ -93,14 +93,17 @@ modeTest = mode(
 )
 
 # Initializes array of time values.
-times           = np.arange(start= 0.0, stop= 5000, step= 5.0)
+times           = np.arange(start= 0.0, stop= 50.0, step= 5.0)
 
 # Initializes array of sunlit values.
 sunlit          = np.ones(len(times))
+sunlit[-3:]     = 0.0
+
+print(times)
 
 # Sets starting battery value.
-batteryMax      = 45                    # Watt*h
-batteryStart    = batteryMax/2
+batteryMax          = 45                    # Watt*h
+batteryCurrent      = batteryMax/2
 
 
 # Verifies runtime check.
@@ -111,7 +114,7 @@ if runtimeVerification := False:
         currentTime     =1250.0,
     )
 
-
+# Verifies battery check.
 if batteryVerification := False:
     print("===== BATTERY VERIFICATION =====")
     test_battery_check(
@@ -119,6 +122,7 @@ if batteryVerification := False:
         currentBatteryCharge  =10.0
     )
 
+# Verifies sunlit check.
 if sunlitVerification := False:
     print("===== SUNLIT VERIFICATION =====")
     test_sunlit_check(
@@ -126,5 +130,36 @@ if sunlitVerification := False:
         currentSunlit  =1.0
     )
 
-if overallVerification := True:
-    print("===== OVERALL CHECK VERIFICATION =====")
+# Verifies active check.
+if activeVerification := False:
+    print("===== ACTIVE CHECK VERIFICATION =====")
+    expectedBools = [
+        False, False, False, False, True, True, True, False, False, False
+    ]
+    resultBools = []
+
+    for i, time in enumerate(times):
+        # Prints current battery and sunlit conditions.
+        print(f"Battery= {batteryCurrent} Wh")
+        print(f"Sunlit= {sunlit[i]}")
+
+        if modeTest.check_active(
+            batteryCharge= batteryCurrent,
+            sunlit= sunlit[i],
+            currentTime= time):
+
+            # Appends true result if check active passes.
+            resultBools.append(True)
+
+            # Updates battery value.
+            batteryCurrent += (1.0 - modeTest.powerActive) * (5.0/60**2)
+
+        else:
+            # Appends false.
+            resultBools.append(False)
+
+            # Updates battery value.
+            batteryCurrent += 1.0 * (5.0/60**2)
+
+    if np.all(resultBools == expectedBools):
+        print("CHECK: Active check passed")

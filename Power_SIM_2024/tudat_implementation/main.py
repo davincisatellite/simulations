@@ -207,11 +207,6 @@ if __name__ == "__main__":
 
     for idx, time in enumerate(times):
 
-        # Power production.
-
-        # Subtract power demand from production.
-
-        # Update battery charge.
 
         # Mode check.
         # TODO: Check if the timers for the off modes are still being incremented.
@@ -238,12 +233,11 @@ if __name__ == "__main__":
             else:
                 activeMode = modeIdle
 
+        # Power production.
 
+        # Subtract power demand from production.
 
-
-
-
-
+        # Update battery charge.
 
 
 
