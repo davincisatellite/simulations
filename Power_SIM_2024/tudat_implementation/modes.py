@@ -20,13 +20,6 @@ class conditionsDict(dict):
             raise KeyError
         dict.__setitem__(self, key, value)
 
-### Example of mode active conditions initialization.
-"""exampleConditions = conditionsDict()
-
-exampleConditions["batteryCharge"] = 100
-exampleConditions["sunlit"] = 1.0
-exampleConditions["timeSinceActive"] = 100
-exampleConditions["timeSinceLastActive"] = 1000"""
 
 class mode:
     """Mode class. Defines the mode and conditions for switching to."""
@@ -120,22 +113,6 @@ class mode:
     def force_active(self):
         # Sets mode to active. Used in verification.
         self.isActive = True
-            
-# TODO: This needs a citation. Is it the safe mode consumption??
-powerPassiveBase = 0.66           # W
-powerPassivePayload = 1.32        
-powerPassivePing = 0.73
 
-safeModeDrain = powerPassiveBase + powerPassivePayload + powerPassivePing
-
-safeMode = safe_mode(powerDrain= safeModeDrain, modeName="safeMode",
-                     batteryCond= 40.0)
-
-# NOTE: Placeholder
-activeModePlaceholder = active_mode(batteryCond= 5.0, sunlightCond= 0.0, powerDrain= 5.0,
-                 modeName= "activeMode", switchTo= "safe")
-
-# Defines the dictionary of modes. 
-modes = {safeKey:safeMode, activeKey:activeModePlaceholder}
             
 

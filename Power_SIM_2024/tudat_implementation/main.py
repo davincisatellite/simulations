@@ -1,6 +1,6 @@
 """This code was written using tudat-space code version 3.10.14. 
 Tudat itself is held under Copyright (c) 2010-2020, Delft University of 
-Technology. All rigths reserved.
+Technology. All rights reserved.
 
 Most questions about how tudat works can be found in the library documentation
 found here: https://docs.tudat.space/en/latest/index.html. Tip: check the 
@@ -19,7 +19,7 @@ import numpy as np
 from tudat_setup import * 
 from assist_functions import *
 from power_sim import *
-from modes import *
+from modes_conditions import *
 
 from datetime import datetime
 
@@ -88,6 +88,7 @@ if __name__ == "__main__":
 
     # Initializes array of average orbital values. 
     orbitAverages = np.empty((len(semiMajorVals), len(incVals), len(eccVals)))
+
 
     # Initializes current run directories.
     runDir = dataDir + f"run_num_{runCount}/"
@@ -186,7 +187,7 @@ if __name__ == "__main__":
 
     ### Plots power average data. 
     # TODO: Put this in its own separate function. 
-    if plotAvgs := True:
+    if plotAvgs := False:
         plot_average_heatmap(
             eccVals= eccVals,
             incVals= incVals,
@@ -196,54 +197,182 @@ if __name__ == "__main__":
             showUncompliant= False
         )
 
-    ### Battery charge operations ###
-    runCount = 5
+    ##### Battery charge operations #####
+    dataDir = "data_battery/"
+    # Runs battery charge orbit propagation.
+    if batteryChargeProp := False:
 
-    valuesDir = dataDir + f"run_num_{runCount}/orbit_averages/"
-    plotsDir = dataDir + f"run_num_{runCount}/plots/"
+        ### Propagation parameters.
+        # Initial keplerian elements. Formatted as array for easy saving later.
+        # Semi-major, eccentricity, inclination, arg of Pe, Long of ascending node, true anomaly.
+        stateStartKepArr = np.array([6720e3, 0.0, np.deg2rad(90), np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)])
+        stateStartKep = np.array([
+            stateStartKepArr[0],               # Semi-major axis [m]
+            stateStartKepArr[1],               # eccentricity
+            stateStartKepArr[2],               # Inclination [rads].
+            stateStartKepArr[3],               # arg of periapsis [rads]
+            stateStartKepArr[4],               # longitude of ascending node [rads]
+            stateStartKepArr[5]                # true anomaly [rads]
+        ])
+        # Initial date and time for propagation.
+        propStartISO = "2025-06-21T07:00:00.000000"
+        # Defines total propagation time in hours.
+        propDurationTime = 24.0
+        # Defines constant time step in seconds.
+        timeStep = 20.0
+        # Converts into tudat time format.
+        tudatDate = time_conversion.datetime_to_tudat(datetime.fromisoformat(propStartISO))
+        # Defines initial time as seconds since J2000.
+        propStartTime = tudatDate.epoch()
 
-    # Initializes mode as idle.
-    activeMode = modeIdle
+        # Reads run count.
+        with open("runcount_battery.txt", "r") as f:
+            runCount = int(f.read())
 
-    for idx, time in enumerate(times):
+        # Increases runcount.
+        runCount += 1
 
+        # Updates runcount file.
+        with open("runcount_battery.txt", "w") as f:
+            f.write('%d' % runCount)
 
-        # Mode check.
-        # TODO: Check if the timers for the off modes are still being incremented.
-        if activeMode.name == "idle":
-            # Checks for comms condition.
-            if modeComms.check_active(
-                conditionsCurrent = ...,
-                timeStep= timeStep
-            ):  activeMode = modeComms
+        # Run directory addresses.
+        runDir              = dataDir + f"run_num_{runCount}/"
+        propsDir            = dataDir + f"run_num_{runCount}/propagation/"
+        outputsDir          = dataDir + f"run_num_{runCount}/outputs/"
+        plotsDir            = dataDir + f"run_num_{runCount}/plots/"
 
-            # Checks for payload condition.
-            elif modePayload.check_active(
-                conditionsCurrent=...,
-                timeStep=timeStep
-            ):  activeMode = modePayload
+        # Creates run directories.
+        os.mkdir(runDir)
+        os.mkdir(propsDir)
+        os.mkdir(outputsDir)
+        os.mkdir(plotsDir)
 
-            else: activeMode = modeIdle
-        else:
-            if activeMode.check_active(
-                conditionsCurrent=...,
-                timeStep=timeStep
-            ):
-                activeMode = activeMode
+        # Creates environment bodies.
+        bodies = create_bodies(
+            sc_mass                     =scMass,
+            initial_att                 =np.eye(3),
+            rotation                    =False,
+            starting_time               =propStartTime,
+            time_step                   =timeStep
+        )
+
+        # TODO: Should not be used since we dont do attitude sims, but propagation breaks if its not here.
+        bodies = create_rotational_settings(
+            bodies                      =bodies,
+            time_step                   =timeStep
+        )
+
+        # Propagates orbit.
+        stateHistory, dependentHistory, stateArr, dependentArr = \
+            propagate_orbit(
+                propDurationTime        =propDurationTime,
+                timeStep                =timeStep,
+                stateStartKep           =stateStartKep,
+                propStartTime           =propStartTime,
+                bodies                  =bodies
+            )
+
+        # Saves dependent array as csv.
+        np.savetxt(propsDir + 'dependent_vals.txt', dependentArr, delimiter=',', fmt="%s")
+        # Saves propagation parameters.
+        np.savetxt(propsDir + 'start_kepler_elems.txt', stateStartKepArr, delimiter=',', fmt="%s")
+
+    # Runs battery charge simulation.
+    if batteryChargeSim  := False:
+        # Which propagation run are you using.
+        runCount            = 1
+        # Run directory addresses.
+        runDir          = dataDir + f"run_num_{runCount}/"
+        propsDir        = runDir + "propagation/"
+        outputsDir      = runDir + "outputs/"
+        plotsDir        = runDir + "plots/"
+
+        # Extracts dependent values array.
+        dependentArr    = np.loadtxt(propsDir + 'dependent_vals.txt', delimiter=',')
+        times           = dependentArr[:, 0]
+        sunlight        = dependentArr[:, 1]
+        timeStep        = times[1] - times[0]
+
+        # Empty array of battery charge.
+        battArr         = np.empty(np.size(times))
+
+        # Initializes mode as idle.
+        activeMode          = modeIdle
+        # Initializes battery charge.
+        battArr[0]          = battStart
+
+        # Saves solar panels and tumbling average powers to file.
+        tumblingArr = np.zeros(np.size(solarArray))
+        tumblingArr[0] = tumblingPowers[0]
+        firstLine = np.array(["Tumbling Power", "Solar Panels"])
+        saveArr = np.vstack((firstLine, np.column_stack((tumblingArr, solarArray))))
+
+        np.savetxt(outputsDir + 'solar_panel_vals.txt', saveArr, delimiter=',', fmt="%s")
+
+        for idx, time in enumerate(times[:-1]):
+
+            # Sunlit from propagation shadow function.
+            sunlitCurrent               = sunlight[idx]
+
+            # Mode check.
+            if activeMode.name == "idle":
+                # Checks for comms condition.
+                if modeComms.check_active(
+                    batteryCharge      = battArr[idx],
+                    sunlit                  = sunlitCurrent,
+                    currentTime             = time
+                ):  activeMode = modeComms
+
+                # Checks for payload condition.
+                elif modePayload.check_active(
+                    batteryCharge      = battArr[idx],
+                    sunlit                  = sunlitCurrent,
+                    currentTime             = time
+                ):  activeMode = modePayload
+
+                else: activeMode = modeIdle
             else:
-                activeMode = modeIdle
+                if activeMode.check_active(
+                    batteryCharge      = battArr[idx],
+                    sunlit                  = sunlitCurrent,
+                    currentTime             = time
+                ):
+                    activeMode = activeMode
+                else:
+                    activeMode = modeIdle
 
-        # Power production.
+            # Power production.
+            powerNet            = tumblingPowers[0] - activeMode.powerActive
 
-        # Subtract power demand from production.
+            # TODO: Add check for max or 0 battery charge.
+            # Update battery charge.
+            battArr[idx+1]      = battArr[idx] + powerNet*(timeStep/60**2)          # W*h
+        # Stacks times and battery charge arrays.
+        outputArr = np.column_stack((times, battArr.T))
+        print(np.shape(outputArr))
 
-        # Update battery charge.
+        # Saves battery charge vs time array.
+        np.savetxt(outputsDir + 'battery_charge.txt', outputArr, delimiter=',', fmt="%s")
 
 
+    ### Plots battery charge vs time.
+    if batteryChargePlots := True:
 
+        # Which propagation run are you using.
+        runCount = 1
 
+        # Run directory addresses.
+        runDir = dataDir + f"run_num_{runCount}/"
+        propsDir = runDir + "propagation/"
+        outputsDir = runDir + "outputs/"
+        plotsDir = runDir + "plots/"
 
+        outputArr           = np.loadtxt(outputsDir + 'battery_charge.txt', delimiter=',')
 
+        plt.plot(outputArr[:,0], outputArr[:,1])
+
+        plt.show()
 
     if batteryChargeCheck := False:
         # Initializes empty battery charge array. 
