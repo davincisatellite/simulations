@@ -61,14 +61,14 @@ payloadConditions = conditionsDict()
 payloadConditions["batteryCharge"]      = 20.0
 payloadConditions["sunlit"]             = 1.0
 # Based on 15-30s activation of dice payload. Uses 30.
-payloadConditions["timeSinceActive"]    = 30.0
+payloadConditions["timeSinceActive"]    = 30
 # Using 3/day dice payload activation.
-payloadConditions["timeSinceLastActive"]= (24*60**2) / 3
+payloadConditions["timeSinceLastActive"]= (24*60**2) / 12
 
 modePayload = mode(
     modeName                            = "payload",
     # Based on ???
     # TODO: This desperately needs better values.
-    powerActive                         = 4.8,
+    powerActive                         = 4.8*2,            # 
     activeConditions                    = payloadConditions
 )

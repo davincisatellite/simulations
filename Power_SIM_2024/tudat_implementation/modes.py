@@ -108,8 +108,11 @@ class mode:
             if self.isActive:
                 # Switches mode off
                 self.isActive = False
+                # Prompts which check caused mode switch. 
+                if not activeChecklist[0]: print(f"{self.name} switched OFF. Runtime Exceeded.")
+                if not activeChecklist[1]: print(f"{self.name} switched OFF. Low Sunlight.")
+                if not activeChecklist[2]: print(f"{self.name} switched OFF. Low Battery.")
             return False
-
     def force_active(self):
         # Sets mode to active. Used in verification.
         self.isActive = True

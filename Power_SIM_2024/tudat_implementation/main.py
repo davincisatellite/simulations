@@ -44,8 +44,8 @@ if __name__ == "__main__":
     #               4 * solar_cell, 2 * solar_cell, 2 * solar_cell]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solarArray = [4*solar_cell, 4*solar_cell, 4*solar_cell,
-                   4*solar_cell, 2*solar_cell, 2*solar_cell]
+    solarArray = [4*solar_cell, 4*solar_cell, 0*solar_cell,
+                   4*solar_cell, 2*solar_cell, 0*solar_cell]
     
     # Total tumbling power based on the sphere of quaternions method in
     # tumbling_code. 
@@ -279,7 +279,7 @@ if __name__ == "__main__":
         np.savetxt(propsDir + 'start_kepler_elems.txt', stateStartKepArr, delimiter=',', fmt="%s")
 
     # Runs battery charge simulation.
-    if batteryChargeSim  := False:
+    if batteryChargeSim  := True:
         # Which propagation run are you using.
         runCount            = 1
         # Run directory addresses.
@@ -339,18 +339,26 @@ if __name__ == "__main__":
                     currentTime             = time
                 ):
                     activeMode = activeMode
+                    """print(f"Time: {(time - times[0])/60}")
+                    print(f"Active mode activation time: {(activeMode.timeActivated - times[0])/60}")"""
                 else:
                     activeMode = modeIdle
 
             # Power production.
             powerNet            = tumblingPowers[0] - activeMode.powerActive
-
-            # TODO: Add check for max or 0 battery charge.
+            
             # Update battery charge.
             battArr[idx+1]      = battArr[idx] + powerNet*(timeStep/60**2)          # W*h
+
+            # Checks if zero battery or max battery is reached. 
+            if battArr[idx+1] < 0.0:
+                print(f"Battery at zero charge!!")
+                battArr[idx+1] = 0.0
+            elif battArr[idx+1] > battMax:
+                battArr[idx+1] = battMax 
+
         # Stacks times and battery charge arrays.
         outputArr = np.column_stack((times, battArr.T))
-        print(np.shape(outputArr))
 
         # Saves battery charge vs time array.
         np.savetxt(outputsDir + 'battery_charge.txt', outputArr, delimiter=',', fmt="%s")
@@ -369,8 +377,14 @@ if __name__ == "__main__":
         plotsDir = runDir + "plots/"
 
         outputArr           = np.loadtxt(outputsDir + 'battery_charge.txt', delimiter=',')
+        dependentArr        = np.loadtxt(propsDir + 'dependent_vals.txt', delimiter=',')
 
-        plt.plot(outputArr[:,0], outputArr[:,1])
+        times = (outputArr[:,0] - outputArr[0,0]) / 60          # Min
+
+        plt.plot(times, outputArr[:,1])
+        plt.plot(times, dependentArr[:, 1]*100)
+
+        plt.grid()
 
         plt.show()
 
