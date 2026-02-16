@@ -15,6 +15,30 @@ exampleConditions["timeSinceActive"] = 100          # s
 exampleConditions["timeSinceLastActive"] = 1000     # s
 """
 
+# ===== Active Component Power Draw [W] =====
+# Safety Factors
+untestedSF      = 1.20
+testedSF        = 1.05
+# Payload components
+pLDice          = 6.445 * untestedSF
+pLBitflip       = 0.060 * untestedSF
+pLManager       = 0.550 * testedSF
+pLGnss          = 0.022 * testedSF
+# On board computer components
+# TODO: Missing OBC Data-board.
+oBCBoard        = 0.022 * untestedSF
+# EPS components
+ePSModule       = 0.090 * testedSF
+ePSThSensor     = 0.001 * testedSF
+ePSThHeater     = 0.010 * testedSF
+# ADCS components
+aDCSHyperion    = 4.000 * untestedSF
+# TODO: Missing a few values from hyperion atm.
+aDCSSunSensor   = 0.003 * testedSF
+# Communication components
+commsReceiving  = 0.480 * testedSF
+commsTransmitt  = 4.000 * testedSF
+commsAntenna    = 0.027 * testedSF
 
 # ===== Idle Mode =====
 # NOTE: Active conditions don't really matter for idle since the logic switching always reverts to this mode.
@@ -25,6 +49,9 @@ idleConditions["batteryCharge"]         = 0.0
 idleConditions["sunlit"]                = 0.0
 idleConditions["timeSinceActive"]       = 0.0
 idleConditions["timeSinceLastActive"]   = 0.0
+# Only contains power draws that are marked 100% in power budget.
+idlePowerDrain                          = pLBitflip + pLManager + pLGnss + oBCBoard + ePSModule + ePSThSensor + \
+                                          aDCSSunSensor + commsReceiving + commsAntenna
 
 modeIdle = mode(
     modeName                            = "idle",
@@ -38,19 +65,26 @@ modeIdle = mode(
 # ===== Comms Mode =====
 commsConditions = conditionsDict()
 
+# Comms mode inactivity period per day.
+commsDailyInactive                      = 1 - 2.00/100
+# Comms mode num. of activations per day. Currently just a sensible amount. 
+commsDailyActivations                   = 6
+
 commsConditions["batteryCharge"]        = 20.0
 commsConditions["sunlit"]               = 1.0
 # TODO: Needs better estimate for comms window duration.
 # Currently 30 min window.
-commsConditions["timeSinceActive"]      = 30*60.0
+commsConditions["timeSinceActive"]      = ((24*60**2) * (1-commsDailyInactive)) / commsDailyActivations
 # Based on "1-2 comms windows per day" estimate. Uses 2.
-commsConditions["timeSinceLastActive"]  = (24*60**2) / 2
+commsConditions["timeSinceLastActive"]  = ((24*60**2) * commsDailyInactive) / commsDailyActivations
+
+commsPowerDrain                         = idlePowerDrain + commsTransmitt
 
 modeComms = mode(
     modeName                            = "comms",
     # TODO: Add payload passive power when available.
     # Based on values taken from Bartek.
-    powerActive                         = 4.8,
+    powerActive                         = commsPowerDrain,
     activeConditions                    = commsConditions
 )
 
@@ -58,17 +92,25 @@ modeComms = mode(
 # ===== Payload Mode =====
 payloadConditions = conditionsDict()
 
+# Payload inactive fraction per day.
+payloadDailyInactive                    = 1 - 1.04/100
+# Payload daily activations. Currently just a sensible amount.
+payloadDailyActivations                 = 8
+
 payloadConditions["batteryCharge"]      = 20.0
 payloadConditions["sunlit"]             = 1.0
 # Based on 15-30s activation of dice payload. Uses 30.
-payloadConditions["timeSinceActive"]    = 30
-# Using 3/day dice payload activation.
-payloadConditions["timeSinceLastActive"]= (24*60**2) / 12
+payloadConditions["timeSinceActive"]    = ((24*60**2) * (1-payloadDailyInactive)) / payloadDailyActivations
+# Interval between payload activations.
+payloadConditions["timeSinceLastActive"]= ((24*60**2) * payloadDailyInactive) / payloadDailyActivations
+
+payloadPowerDrain                       = idlePowerDrain + aDCSHyperion + pLDice
+
 
 modePayload = mode(
     modeName                            = "payload",
-    # Based on ???
-    # TODO: This desperately needs better values.
-    powerActive                         = 4.8*2,            # 
+    # Based on power budget.
+    # TODO: This needs more complete values.
+    powerActive                         = payloadPowerDrain,
     activeConditions                    = payloadConditions
 )

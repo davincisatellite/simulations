@@ -381,71 +381,13 @@ if __name__ == "__main__":
 
         times = (outputArr[:,0] - outputArr[0,0]) / 60          # Min
 
+        plt.plot(times, dependentArr[:, 1] * battMax, "--")
         plt.plot(times, outputArr[:,1])
-        plt.plot(times, dependentArr[:, 1]*100)
+
 
         plt.grid()
 
         plt.show()
-
-    if batteryChargeCheck := False:
-        # Initializes empty battery charge array. 
-        batt_current = np.zeros(np.size(times))
-        batt_current[0] = battStart
-
-        # Placeholder. Defines starting mode as the "active" mode. 
-        # TODO: replace with a more accurate starting mode. 
-        modeCurrent = modes['active']
-
-        # NOTE: Find a way to avoid another for loop here. Something with 
-        # integration might work? But needs to detect when maximum battery
-        # charge is reached.
-        for i in range(np.size(times) -1):
-            batt_old = batt_current[i]
-
-            # State machine
-            # Currently only flips between "active" and safe modes. 
-            modeOld = modeCurrent
-
-            checkRun, switchMode = modeOld.check_run(
-                batteryCharge= batt_current[i], sunlight= shadowArray[i])
-
-            if checkRun:
-                modeCurrent = modeOld
-            else:
-                modeCurrent = modes[switchMode]
-
-            # TODO: Implement transient power consumptions. Probably in some 
-            # every nth orbit kind of way? Would be best to figure out actual
-            # consumption. 
-            # - dice: Every 6th orbit. (1.33W * 19s)
-            # - short overpass: Every 100th orbit. (4.23W * 130s)
-            # - medium overpass: Every 100th orbit. (4.23W * 600s)
-            # - long overpass: Every 17th orbit. (4.23W * 690s)
-            # - point: Every 6th orbit. (2.69W * 72s)
-
-            powerNet = powerSolar[i] - modeCurrent.powerDrain
-
-            # Computes produced energy in step, adds to current batt charge. 
-            charge = (powerNet * timeStep) / 60**2      # [W*h]
-            
-            batt_new = batt_old + charge
-
-            if batt_new >= battMax:
-                batt_current[i+1] = battMax
-            elif batt_new <= 0.0:
-                print(f"Warning!: Full Discharge.")
-                batt_current[i+1] = 0.0
-            else:
-                batt_current[i+1] = batt_new
-
-        # TODO: Plot these nicely. 
-        plt.plot(times, powerSolar, "-r", label="Power Produced")
-        plt.plot(times, batt_current, "--b", label="Stored Energy")
-        plt.grid()
-        plt.legend()
-        plt.show()
-
 
     ######      VERIFICATION
     ### Verified for simple Earth-pointing. 
