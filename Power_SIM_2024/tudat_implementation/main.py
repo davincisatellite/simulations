@@ -200,12 +200,13 @@ if __name__ == "__main__":
     ##### Battery charge operations #####
     dataDir = "data_battery/"
     # Runs battery charge orbit propagation.
+    # TODO: Turn this into an isolated function
     if batteryChargeProp := False:
 
         ### Propagation parameters.
         # Initial keplerian elements. Formatted as array for easy saving later.
         # Semi-major, eccentricity, inclination, arg of Pe, Long of ascending node, true anomaly.
-        stateStartKepArr = np.array([6720e3, 0.0, np.deg2rad(90), np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)])
+        stateStartKepArr = np.array([6860e3, 0.0, np.deg2rad(90), np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)])
         stateStartKep = np.array([
             stateStartKepArr[0],               # Semi-major axis [m]
             stateStartKepArr[1],               # eccentricity
@@ -280,114 +281,25 @@ if __name__ == "__main__":
 
     # Runs battery charge simulation.
     if batteryChargeSim  := True:
-        # Which propagation run are you using.
-        runCount            = 1
-        # Run directory addresses.
-        runDir          = dataDir + f"run_num_{runCount}/"
-        propsDir        = runDir + "propagation/"
-        outputsDir      = runDir + "outputs/"
-        plotsDir        = runDir + "plots/"
-
-        # Extracts dependent values array.
-        dependentArr    = np.loadtxt(propsDir + 'dependent_vals.txt', delimiter=',')
-        times           = dependentArr[:, 0]
-        sunlight        = dependentArr[:, 1]
-        timeStep        = times[1] - times[0]
-
-        # Empty array of battery charge.
-        battArr         = np.empty(np.size(times))
-
-        # Initializes mode as idle.
-        activeMode          = modeIdle
-        # Initializes battery charge.
-        battArr[0]          = battStart
-
-        # Saves solar panels and tumbling average powers to file.
-        tumblingArr = np.zeros(np.size(solarArray))
-        tumblingArr[0] = tumblingPowers[0]
-        firstLine = np.array(["Tumbling Power", "Solar Panels"])
-        saveArr = np.vstack((firstLine, np.column_stack((tumblingArr, solarArray))))
-
-        np.savetxt(outputsDir + 'solar_panel_vals.txt', saveArr, delimiter=',', fmt="%s")
-
-        for idx, time in enumerate(times[:-1]):
-
-            # Sunlit from propagation shadow function.
-            sunlitCurrent               = sunlight[idx]
-
-            # Mode check.
-            if activeMode.name == "idle":
-                # Checks for comms condition.
-                if modeComms.check_active(
-                    batteryCharge      = battArr[idx],
-                    sunlit                  = sunlitCurrent,
-                    currentTime             = time
-                ):  activeMode = modeComms
-
-                # Checks for payload condition.
-                elif modePayload.check_active(
-                    batteryCharge      = battArr[idx],
-                    sunlit                  = sunlitCurrent,
-                    currentTime             = time
-                ):  activeMode = modePayload
-
-                else: activeMode = modeIdle
-            else:
-                if activeMode.check_active(
-                    batteryCharge      = battArr[idx],
-                    sunlit                  = sunlitCurrent,
-                    currentTime             = time
-                ):
-                    activeMode = activeMode
-                    """print(f"Time: {(time - times[0])/60}")
-                    print(f"Active mode activation time: {(activeMode.timeActivated - times[0])/60}")"""
-                else:
-                    activeMode = modeIdle
-
-            # Power production.
-            powerNet            = tumblingPowers[0] - activeMode.powerActive
-            
-            # Update battery charge.
-            battArr[idx+1]      = battArr[idx] + powerNet*(timeStep/60**2)          # W*h
-
-            # Checks if zero battery or max battery is reached. 
-            if battArr[idx+1] < 0.0:
-                print(f"Battery at zero charge!!")
-                battArr[idx+1] = 0.0
-            elif battArr[idx+1] > battMax:
-                battArr[idx+1] = battMax 
-
-        # Stacks times and battery charge arrays.
-        outputArr = np.column_stack((times, battArr.T))
-
-        # Saves battery charge vs time array.
-        np.savetxt(outputsDir + 'battery_charge.txt', outputArr, delimiter=',', fmt="%s")
-
+        battery_sim(
+            dataDir         = dataDir,
+            battStart       = battStart,
+            battMax         = battMax,
+            solarArray      = solarArray,
+            tumblingPowers  = tumblingPowers,
+            runCount        = 1
+        )
 
     ### Plots battery charge vs time.
     if batteryChargePlots := True:
-
-        # Which propagation run are you using.
-        runCount = 1
-
-        # Run directory addresses.
-        runDir = dataDir + f"run_num_{runCount}/"
-        propsDir = runDir + "propagation/"
-        outputsDir = runDir + "outputs/"
-        plotsDir = runDir + "plots/"
-
-        outputArr           = np.loadtxt(outputsDir + 'battery_charge.txt', delimiter=',')
-        dependentArr        = np.loadtxt(propsDir + 'dependent_vals.txt', delimiter=',')
-
-        times = (outputArr[:,0] - outputArr[0,0]) / 60          # Min
-
-        plt.plot(times, dependentArr[:, 1] * battMax, "--")
-        plt.plot(times, outputArr[:,1])
+        plot_battery_charge(
+            dataDir         = dataDir,
+            battMax         = battMax,
+            runCount        = [1]
+        )
 
 
-        plt.grid()
 
-        plt.show()
 
     ######      VERIFICATION
     ### Verified for simple Earth-pointing. 

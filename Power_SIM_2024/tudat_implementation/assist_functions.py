@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 
+# Plot style lists.
+plotStyles      = ["-", "--", "-.", ":"]
+plotColors      = ["r", "g", "b", "k"]
+
 def read_files():
             """Returns specific case data as arrays. Specifically for Q2.
             """
@@ -75,3 +79,53 @@ def plot_average_heatmap(
         fig.tight_layout()
 
         fig.savefig(plotsDir + f"eccentricity{eccentricity}_orbitAvg.png")
+
+def plot_battery_charge(
+        dataDir: str,
+        battMax: float,
+        runCount: list,
+):
+    """
+
+    Args:
+        dataDir:
+        battMax:
+        runCount:
+
+    Returns:
+
+    """
+
+    plt.rcParams.update({'font.size': 14})
+
+    fig, ax = plt.subplots()
+
+    for idx, run in enumerate(runCount):
+        # Run directory addresses.
+        runDir = dataDir + f"run_num_{run}/"
+        propsDir = runDir + "propagation/"
+        outputsDir = runDir + "outputs/"
+
+        outputArr = np.loadtxt(outputsDir + 'battery_charge.txt', delimiter=',')
+        dependentArr = np.loadtxt(propsDir + 'dependent_vals.txt', delimiter=',')
+
+        times = (outputArr[:, 0] - outputArr[0, 0]) / 60  # Min
+
+        ax.plot(times, dependentArr[:, 1] * battMax, ":k")
+        ax.plot(times, outputArr[:, 1], plotStyles[idx], plotColors[idx],
+                label=f"Run {run}")
+
+    ax.grid()
+
+    # Axis ticks.
+    ax.set_ylim(bottom= -5.0, top= battMax + 5.0)
+
+    # Axis labels
+    ax.set_xlabel(r"Propagation Time [min]")
+    ax.set_ylabel(r"Battery Charge [W*h]")
+
+    fig.legend()
+
+    fig.savefig(dataDir + f"battery_sim_combined.png")
+
+    return None

@@ -59,7 +59,8 @@ modeIdle = mode(
     # Idle power active should be the sum of all passive power draws.
     # Comms + Payload
     powerActive                         = 0.1 + 0.0,           # W
-    activeConditions                    = idleConditions
+    activeConditions                    = idleConditions,
+    iD                                  = 0
 )
 
 # ===== Comms Mode =====
@@ -67,7 +68,7 @@ commsConditions = conditionsDict()
 
 # Comms mode inactivity period per day.
 commsDailyInactive                      = 1 - 2.00/100
-# Comms mode num. of activations per day. Currently just a sensible amount. 
+# Comms mode num. of activations per day. Currently just a sensible amount.
 commsDailyActivations                   = 6
 
 commsConditions["batteryCharge"]        = 20.0
@@ -85,7 +86,8 @@ modeComms = mode(
     # TODO: Add payload passive power when available.
     # Based on values taken from Bartek.
     powerActive                         = commsPowerDrain,
-    activeConditions                    = commsConditions
+    activeConditions                    = commsConditions,
+    iD                                  = 1
 )
 
 
@@ -112,5 +114,6 @@ modePayload = mode(
     # Based on power budget.
     # TODO: This needs more complete values.
     powerActive                         = payloadPowerDrain,
-    activeConditions                    = payloadConditions
+    activeConditions                    = payloadConditions,
+    iD                                  = 2
 )

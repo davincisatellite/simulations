@@ -26,17 +26,21 @@ class mode:
     def __init__(self,
                  modeName: str,
                  powerActive: float,
-                 activeConditions: conditionsDict
+                 activeConditions: conditionsDict,
+                 iD: int,
                  ):
         """Initializes mode.
         Args:
         - modeName: string. Name of the mode.
         - powerActive: float. Power consumption while mode is active.
-        - activeConditions: conditionsDict. Dictionary of conditions for being active."""
+        - activeConditions: conditionsDict. Dictionary of conditions for being active.
+        - iD: int. ID of mode."""
 
         self.name = modeName
         self.powerActive = powerActive
         self.activeConditions = activeConditions
+        self.iD = iD
+
         self.isActive = False
         # Time of activation given by simulation time.
         self.timeActivated = 0.0
