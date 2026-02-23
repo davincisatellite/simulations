@@ -280,7 +280,7 @@ if __name__ == "__main__":
         np.savetxt(propsDir + 'start_kepler_elems.txt', stateStartKepArr, delimiter=',', fmt="%s")
 
     # Runs battery charge simulation.
-    if batteryChargeSim  := True:
+    if batteryChargeSim  := False:
         battery_sim(
             dataDir         = dataDir,
             battStart       = battStart,
@@ -295,10 +295,9 @@ if __name__ == "__main__":
         plot_battery_charge(
             dataDir         = dataDir,
             battMax         = battMax,
-            runCount        = [1]
+            runCount        = [1,2,3],
+            plotCombined    = True
         )
-
-
 
 
     ######      VERIFICATION

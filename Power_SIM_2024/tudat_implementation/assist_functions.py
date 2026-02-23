@@ -1,3 +1,5 @@
+from cProfile import label
+
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -84,6 +86,7 @@ def plot_battery_charge(
         dataDir: str,
         battMax: float,
         runCount: list,
+        plotCombined: bool= False,
 ):
     """
 
@@ -100,7 +103,33 @@ def plot_battery_charge(
 
     fig, ax = plt.subplots()
 
-    for idx, run in enumerate(runCount):
+    tickNum    = 10
+
+    if plotCombined:
+        # For better storage naming.
+        runOutputName   = ""
+        for idx, run in enumerate(runCount):
+            runOutputName += f",{run}"
+
+            # Run directory addresses.
+            runDir = dataDir + f"run_num_{run}/"
+            propsDir = runDir + "propagation/"
+            outputsDir = runDir + "outputs/"
+
+            outputArr = np.loadtxt(outputsDir + 'battery_charge.txt', delimiter=',')
+            dependentArr = np.loadtxt(propsDir + 'dependent_vals.txt', delimiter=',')
+
+            times = (outputArr[:, 0] - outputArr[0, 0]) / 60  # Min
+
+            # Plots only the battery values. Sunlit portions vary between runs.
+            ax.plot(times, outputArr[:, 1], linestyle= plotStyles[idx], color= plotColors[idx],
+                    label=f"Run {run}")
+
+
+    else:
+        run = runCount[0]
+        idx = 0
+
         # Run directory addresses.
         runDir = dataDir + f"run_num_{run}/"
         propsDir = runDir + "propagation/"
@@ -111,21 +140,28 @@ def plot_battery_charge(
 
         times = (outputArr[:, 0] - outputArr[0, 0]) / 60  # Min
 
-        ax.plot(times, dependentArr[:, 1] * battMax, ":k")
-        ax.plot(times, outputArr[:, 1], plotStyles[idx], plotColors[idx],
+        ax.plot(times, outputArr[:, 1], linestyle=plotStyles[idx], color=plotColors[idx],
                 label=f"Run {run}")
 
-    ax.grid()
+        # Also plots evolution of sunlit parameter.
+        ax2 = ax.twinx()
+        ax2.plot(times, dependentArr[:, 1], ":k", label= f"Sunlit %")
 
-    # Axis ticks.
-    ax.set_ylim(bottom= -5.0, top= battMax + 5.0)
+        ax2.set_ylabel(r"Sunlit %")
+        ax2.set_ylim(bottom= 0, top= 1)
 
     # Axis labels
     ax.set_xlabel(r"Propagation Time [min]")
     ax.set_ylabel(r"Battery Charge [W*h]")
 
+    # Axis limits
+    ax.set_yticks(np.linspace(start= 0, stop= battMax, num= tickNum))
+
+    ax.grid()
+
     fig.legend()
 
-    fig.savefig(dataDir + f"battery_sim_combined.png")
+    if plotCombined: fig.savefig(dataDir + f"battery_sim_runs{runOutputName}.png")
+    else: fig.savefig(runDir + f"plots/battery_sim_run{run}.png")
 
     return None
