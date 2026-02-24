@@ -51,7 +51,7 @@ def plot_average_heatmap(
 
         fig, ax = plt.subplots()
 
-        # Checks whether we want to see uncompliant (<100% of 4W) results.
+        # Checks whether we want to see uncompliant (<100% of power requirement) results.
         if showUncompliant:
             im = ax.imshow(data / powerReq * 100)
         else:
@@ -74,7 +74,7 @@ def plot_average_heatmap(
 
         # Create colorbar
         cbar = ax.figure.colorbar(im, ax=ax)
-        cbar.ax.set_ylabel("% of 4W Average", rotation=-90, va="bottom")
+        cbar.ax.set_ylabel(f"% of {powerReq}W Average", rotation=-90, va="bottom")
 
         fig.suptitle(f"Eccentricity {eccentricity}")
 

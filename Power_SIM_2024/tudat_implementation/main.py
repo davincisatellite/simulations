@@ -187,14 +187,15 @@ if __name__ == "__main__":
 
     ### Plots power average data. 
     # TODO: Put this in its own separate function. 
-    if plotAvgs := False:
+    if plotAvgs := True:
         plot_average_heatmap(
             eccVals= eccVals,
             incVals= incVals,
             semiMajorVals= semiMajorVals,
             dataDir= dataDir,
-            runCount= 5,
-            showUncompliant= False
+            runCount= 1,
+            showUncompliant= False,
+            powerReq= 2.3
         )
 
     ##### Battery charge operations #####
@@ -291,7 +292,7 @@ if __name__ == "__main__":
         )
 
     ### Plots battery charge vs time.
-    if batteryChargePlots := True:
+    if batteryChargePlots := False:
         plot_battery_charge(
             dataDir         = dataDir,
             battMax         = battMax,
