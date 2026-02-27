@@ -44,7 +44,7 @@ if __name__ == "__main__":
     #               4 * solar_cell, 2 * solar_cell, 2 * solar_cell]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solarArray = [4*solar_cell, 4*solar_cell, 0*solar_cell,
+    solarArray = [4*solar_cell, 4*solar_cell, 2*solar_cell,
                    4*solar_cell, 2*solar_cell, 0*solar_cell]
     
     # Total tumbling power based on the sphere of quaternions method in
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     # Simulation range for orbital power averages. 
     semiMajorVals = np.linspace(start= 6720e3, stop= 6920e3, num= 21)
     eccVals = np.linspace(start= 0.00, stop= 0.015, num= 2)
-    incVals = np.linspace(start= 60.0, stop= 120.0, num= 21)
+    incVals = np.linspace(start= 50.0, stop= 120.0, num= 21)
 
     totalProps = len(semiMajorVals) * len(eccVals) * len(incVals)
     currentProps = 0
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     plotsDir = dataDir + f"run_num_{runCount}/plots/"
 
     ### Propagation-related definitions.
-    if propOrbits := False:
+    if propOrbits := True:
         # Increases runcount.
         runCount += 1
         # Initializes current run directories.
@@ -171,6 +171,9 @@ if __name__ == "__main__":
                         )
                     
                     # Returns orbit average. 
+                    # TODO: This should be made in such a way that power 
+                    # averages can be re-calculated from a saved set of orbital
+                    # calculations. 
                     orbitAvg = orbit_average(
                         stateArr= stateArr,
                         dependentArr= dependentArr, 
@@ -193,9 +196,9 @@ if __name__ == "__main__":
             incVals= incVals,
             semiMajorVals= semiMajorVals,
             dataDir= dataDir,
-            runCount= 1,
+            runCount= 7,
             showUncompliant= False,
-            powerReq= 2.3
+            powerReq= 2.52
         )
 
     ##### Battery charge operations #####

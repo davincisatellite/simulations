@@ -83,11 +83,11 @@ def random_quaternion_tumbling(solarArray, numAttitudes = 2000,
 
 
 def orbit_average(
-        stateArr: np.array,
-        dependentArr: np.array,
-        tumblingPowers: np.array, 
+        stateArr: npt.NDArray,
+        dependentArr: npt.NDArray,
+        tumblingPowers: npt.NDArray, 
         tumblingCheck: bool= True,
-        solarArray: np.array= np.zeros(6)
+        solarArray: npt.NDArray= np.zeros(6)
 ):
     if tumblingCheck:
         # TODO: Implement loop that tests power production through all 
@@ -130,6 +130,8 @@ def orbit_average(
     trueAnomaly = dependentArr[:,-1] * 180/np.pi
 
     # Finds indices close to 360º within a margin (1.5º)
+    # TODO: This method of finding the "End" of an orbit is still really iffy.
+    # Improve. 
     indx = np.argwhere(np.abs(trueAnomaly - 360) < 5)
 
     # Calculates average of power production through orbit considering the 
