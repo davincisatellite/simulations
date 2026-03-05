@@ -25,7 +25,12 @@ from datetime import datetime
 
 if __name__ == "__main__":
 
+    # power data
     dataDir = f"data/"
+
+    # propagation data
+    propagationDir = f"data_propagation/"
+    os.makedirs(propagationDir, exist_ok=True)
 
     # Reads run count.
     with open("runcount.txt", "r") as f:
@@ -148,7 +153,6 @@ if __name__ == "__main__":
                 for k,semiMajorAxis in enumerate(semiMajorVals):
                     # Progress indicator. 
                     currentProps += 1
-                    print(f"Running propagation {currentProps} out of {totalProps}.")
 
                     # Defines initial keplerian orbital elements. 
                     stateStartKep = np.array([
@@ -160,15 +164,32 @@ if __name__ == "__main__":
                         np.deg2rad(0),          # true anomaly [rads]
                     ])
 
-                    # Propagates orbit. 
-                    stateHistory, dependentHistory, stateArr, dependentArr = \
-                        propagate_orbit(
-                            propDurationTime= propDurationTime,
-                            timeStep= timeStep,
-                            stateStartKep= stateStartKep,
-                            propStartTime= propStartTime,
-                            bodies= bodies
+                    # Checks if an .npz file with propagation data for a given orbit has already been saved
+                    # assumes only eccentricity, inclination, and semi major axis are varying
+                    propagation_file = propagationDir + f"ecc_{eccentricity}_inc_{inclination}_a_{semiMajorAxis}.npz"
+
+                    if os.path.exists(propagation_file):
+                        # Propagation found - load relevant arrays
+                        print(f"Previous data found for propagation {currentProps} out of {totalProps}.")
+                        propagation_data = np.load(propagation_file)
+                        stateArr = propagation_data["stateArr"]
+                        dependentArr = propagation_data["dependentArr"]
+
+                    else:
+                        # No previous propagation data for that orbit is found so:
+                        print(f"Running propagation {currentProps} out of {totalProps}.")
+                        # Propagates orbit
+                        stateHistory, dependentHistory, stateArr, dependentArr = \
+                            propagate_orbit(
+                                propDurationTime= propDurationTime,
+                                timeStep= timeStep,
+                                stateStartKep= stateStartKep,
+                                propStartTime= propStartTime,
+                                bodies= bodies
                         )
+                        #  Saves .npz file with propagation data for a given orbit
+                        #  assumes only eccentricity, inclination, and semi major axis are varying
+                        np.savez(propagation_file, stateArr=stateArr, dependentArr=dependentArr)
                     
                     # Returns orbit average. 
                     # TODO: This should be made in such a way that power 
