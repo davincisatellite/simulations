@@ -49,7 +49,7 @@ if __name__ == "__main__":
     #               4 * solar_cell, 2 * solar_cell, 2 * solar_cell]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solarArray = [4*solar_cell, 4*solar_cell, 2*solar_cell,
+    solarArray = [4*solar_cell, 4*solar_cell, 0*solar_cell,
                    4*solar_cell, 2*solar_cell, 0*solar_cell]
     
     # Total tumbling power based on the sphere of quaternions method in
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     # Simulation range for orbital power averages. 
     semiMajorVals = np.linspace(start= 6720e3, stop= 6920e3, num= 21)
     eccVals = np.linspace(start= 0.00, stop= 0.015, num= 2)
-    incVals = np.linspace(start= 50.0, stop= 120.0, num= 21)
+    incVals = np.linspace(start= 60.0, stop= 120.0, num= 21)
 
     totalProps = len(semiMajorVals) * len(eccVals) * len(incVals)
     currentProps = 0
@@ -209,15 +209,14 @@ if __name__ == "__main__":
             filename = valuesDir + f"orbit_avg_eccentricity{eccentricity}.csv"
             np.savetxt(filename, orbitAverages[:,:,i], delimiter= ",")
 
-    ### Plots power average data. 
-    # TODO: Put this in its own separate function. 
+    ### Plots power average data.
     if plotAvgs := True:
         plot_average_heatmap(
             eccVals= eccVals,
             incVals= incVals,
             semiMajorVals= semiMajorVals,
             dataDir= dataDir,
-            runCount= 7,
+            runCount= 10,
             showUncompliant= False,
             powerReq= 2.52
         )
@@ -389,29 +388,6 @@ if __name__ == "__main__":
 
         plt.show()
     
-    ######      PLOTTING
-    if plot_data := False:
-
-        #######  Plotting Shenanigans  #######
-        # TODO: Put this in its own little python file.  
-        plt.rcParams.update({'font.size': 18})
-
-        #ax = plt.figure().add_subplot(projection='3d')
-        ax1 = plt.figure().add_subplot()
-
-        times = state_array[:,0] / 60**2
-
-        #ax.plot(state_array[:,1], state_array[:,2], state_array[:,3])
-
-        ax1.plot(times, dependent_array[:,1])
-
-        #ax.set_zlim(-5e6, 5e6)
-        #ax.set_xlim(-5e6, 5e6)
-        #ax.set_ylim(-5e6, 5e6)
-
-        plt.show()
-
-        #######  ---  #######
 
 
 
