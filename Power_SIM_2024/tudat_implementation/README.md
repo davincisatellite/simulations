@@ -1,13 +1,19 @@
 # 2025 Power Simulations
 This folder contains the battery and power average simulations produced during the 2025-26 
 academic year. This readme serves as a user guide for modifying the parameters in order to produce desired conditions. 
-
+Both simulations use functions defined in the _tudat_setup_ file, made using the 3.10.14 version of [Tudat](https://docs.tudat.space/en/latest/index.html), mostly following examples given on the website. 
 ## Power Average Simulations
 
-WIP
+The power average code can be accessed in the power_sim file. The objective of this code is to sweep through a set of starting
+orbital parameters and calculate the average power produced throughout a single orbit with the given parameters. This is done
+by looping through the parameters and running a tudat orbit propagation for each of them. Then, using the shadow function
+value output from tudat and multiply it by a constant tumbling power production value. This constant value
+is obtained by applying a randomized set of attitudes, obtaining the power produced in each random attitude, and averaging them.
+
+Currently, the set of  orbital parameters that is propagated is defined in _main.py_.
 
 ## Battery Simulations
-Battery simulation code can be accessed in the power_sim, modes and modes_conditions python files. 
+Battery simulation code can be accessed in the _power_sim_, _modes_ and _modes_conditions_ python files. 
 - **power_sim**: Contains the battery_sim function,  the loop which runs through the desired timeframe of the simulation. 
 This loop defaults to the idle mode and checks whether the conditions given allow to switch to the comms or payload mode.
 If so, it remains in one of these modes until the run conditions are no longer met. 
