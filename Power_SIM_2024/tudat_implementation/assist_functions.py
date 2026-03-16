@@ -83,7 +83,6 @@ def plot_average_heatmap(
 
         fig.savefig(plotsDir + f"eccentricity{eccentricity}_orbitAvg.png")
 
-
         # Make interactive html
         if not showUncompliant:
             data_plot = np.where(alphaArr >= 1.0, data / powerReq * 100, np.nan)

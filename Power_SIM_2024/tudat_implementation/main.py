@@ -24,6 +24,8 @@ from modes_conditions import *
 
 from datetime import datetime
 
+# Forces re-propagation of values. 
+forceProp = False
 
 def single_orbit(args):
     """Worker function for a single orbit propagation."""
@@ -35,12 +37,12 @@ def single_orbit(args):
     # assumes only eccentricity, inclination, and semi major axis are varying
     propagation_file = propagationDir + f"ecc_{eccentricity}_inc_{inclination}_a_{semiMajorAxis}.npz"
 
-    if os.path.exists(propagation_file):
+    if os.path.exists(propagation_file) and not(forceProp):
         # If previously ran, just take from saved data
         print("using saved data c:")
-        propagation_data = np.load(propagation_file)
-        stateArr = propagation_data["stateArr"]
-        dependentArr = propagation_data["dependentArr"]
+        propagation_data    = np.load(propagation_file)
+        stateArr            = propagation_data["stateArr"]
+        dependentArr        = propagation_data["dependentArr"]
     else:
         print("propagating...")
         # Each worker needs its own bodies instance — tudat objects aren't picklable
@@ -51,6 +53,7 @@ def single_orbit(args):
             starting_time=propStartTime,
             time_step=timeStep
         )
+
         bodies_local = create_rotational_settings(bodies=bodies_local, time_step=timeStep)
 
         # Propagates the orbit if this combination was not analysed before
@@ -58,7 +61,7 @@ def single_orbit(args):
             propDurationTime=propDurationTime,
             timeStep=timeStep,
             stateStartKep=np.array([
-                semiMajorAxis, eccentricity, inclination,
+                semiMajorAxis, eccentricity, np.deg2rad(inclination),
                 np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
             ]),
             propStartTime=propStartTime,
@@ -137,8 +140,8 @@ if __name__ == "__main__":
 
     # Simulation range for orbital power averages. 
     semiMajorVals = np.linspace(start= 6720e3, stop= 6920e3, num= 21)
-    eccVals = np.linspace(start= 0.00, stop= 0.015, num= 2)
-    incVals = np.linspace(start= 50.0, stop= 100.0, num= 81)
+    eccVals = np.linspace(start= 0.0, stop= 0.015, num= 2)
+    incVals = np.linspace(start= 50.0, stop= 140.0, num= 81)
 
     totalProps = len(semiMajorVals) * len(eccVals) * len(incVals)
     currentProps = 0
@@ -202,6 +205,7 @@ if __name__ == "__main__":
                 i = list(eccVals).index(ecc)
                 j = list(incVals).index(inc)
                 k = list(semiMajorVals).index(sma)
+
                 orbitAverages[k, j, i] = orbitAvg
                 currentProps += 1
                 print(f"Completed propagation {currentProps} out of {totalProps}.")

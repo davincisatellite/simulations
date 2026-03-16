@@ -255,7 +255,7 @@ def propagate_orbit(
 
     # Defines dependent variables. 
     dependent_variables = [
-        # Stores received irradiance in [W/m^2]. Considers eclypse as 
+        # Stores intermediate shadow function. Considers eclypse as 
         # on/off, no penumbra. Dependent column 1 (Zero is time)
         propagation_setup.dependent_variable.received_irradiance_shadow_function(
             target_body= "davinci",
@@ -271,6 +271,11 @@ def propagate_orbit(
         # inertial reference frame (J2000). Dependent columns (5 to 13)
         propagation_setup.dependent_variable.inertial_to_body_fixed_rotation_frame(
             body= "davinci"
+        ),
+        # Altitude. Dependent column (14)
+        propagation_setup.dependent_variable.altitude(
+            body= "davinci",
+            central_body= "Earth"
         ),
 
         ### REMOVABLE DEPENDENTS TODO: REMOVE ONCE UNNECESSARY
