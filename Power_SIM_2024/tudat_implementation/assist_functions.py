@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import numpy.typing as npt
+import plotly.express as px
 
 # Plot style lists.
 plotStyles      = ["-", "--", "-.", ":"]
@@ -81,6 +82,29 @@ def plot_average_heatmap(
         fig.tight_layout()
 
         fig.savefig(plotsDir + f"eccentricity{eccentricity}_orbitAvg.png")
+
+
+        # Make interactive html
+        if not showUncompliant:
+            data_plot = np.where(alphaArr >= 1.0, data / powerReq * 100, np.nan)
+        else:
+            data_plot = data / powerReq * 100
+
+        fig_html = px.imshow(
+            data_plot,
+            labels=dict(
+                x="Inclination [º]",
+                y="Semi Major Axis [km]",
+                color=f"% of {powerReq}W Average"
+            ),
+            x=np.round(incVals, 3),
+            y=semiMajorVals * 1e-3,
+            aspect="auto",
+            text_auto=True
+        )
+        # Save as interactive HTML
+        html_file = plotsDir + f"eccentricity{eccentricity}_orbitAvg.html"
+        fig_html.write_html(html_file)
 
 def plot_battery_charge(
         dataDir: str,

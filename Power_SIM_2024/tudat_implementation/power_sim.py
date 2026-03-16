@@ -132,7 +132,7 @@ def orbit_average(
     # Finds indices close to 360º within a margin (1.5º)
     # TODO: This method of finding the "End" of an orbit is still really iffy.
     # Improve. 
-    indx = np.argwhere(np.abs(trueAnomaly - 360) < 5)
+    indx = np.argwhere(np.abs(trueAnomaly - 360) < 1.5)
 
     # Calculates average of power production through orbit considering the 
     # last index in the array. Should ensure same number of orbits considered

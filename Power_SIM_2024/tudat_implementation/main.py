@@ -13,6 +13,7 @@ can/should be expanded):
 
 import matplotlib.pyplot as plt
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 
@@ -22,6 +23,57 @@ from power_sim import *
 from modes_conditions import *
 
 from datetime import datetime
+
+
+def single_orbit(args):
+    """Worker function for a single orbit propagation."""
+    (eccentricity, inclination, semiMajorAxis,
+     propDurationTime, timeStep, propStartTime,
+     tumblingPowers, propagationDir, scMass) = args
+
+    # Checks if an .npz file with propagation data for a given orbit has already been saved
+    # assumes only eccentricity, inclination, and semi major axis are varying
+    propagation_file = propagationDir + f"ecc_{eccentricity}_inc_{inclination}_a_{semiMajorAxis}.npz"
+
+    if os.path.exists(propagation_file):
+        # If previously ran, just take from saved data
+        print("using saved data c:")
+        propagation_data = np.load(propagation_file)
+        stateArr = propagation_data["stateArr"]
+        dependentArr = propagation_data["dependentArr"]
+    else:
+        print("propagating...")
+        # Each worker needs its own bodies instance — tudat objects aren't picklable
+        bodies_local = create_bodies(
+            sc_mass=scMass,
+            initial_att=np.eye(3),
+            rotation=True,
+            starting_time=propStartTime,
+            time_step=timeStep
+        )
+        bodies_local = create_rotational_settings(bodies=bodies_local, time_step=timeStep)
+
+        # Propagates the orbit if this combination was not analysed before
+        _, _, stateArr, dependentArr = propagate_orbit(
+            propDurationTime=propDurationTime,
+            timeStep=timeStep,
+            stateStartKep=np.array([
+                semiMajorAxis, eccentricity, inclination,
+                np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
+            ]),
+            propStartTime=propStartTime,
+            bodies=bodies_local
+        )
+        np.savez(propagation_file, stateArr=stateArr, dependentArr=dependentArr)
+
+    orbitAvg = orbit_average(
+        stateArr=stateArr,
+        dependentArr=dependentArr,
+        tumblingPowers=tumblingPowers,
+        tumblingCheck=True,
+    )
+
+    return (eccentricity, inclination, semiMajorAxis, orbitAvg)
 
 if __name__ == "__main__":
 
@@ -86,14 +138,13 @@ if __name__ == "__main__":
     # Simulation range for orbital power averages. 
     semiMajorVals = np.linspace(start= 6720e3, stop= 6920e3, num= 21)
     eccVals = np.linspace(start= 0.00, stop= 0.015, num= 2)
-    incVals = np.linspace(start= 60.0, stop= 120.0, num= 21)
+    incVals = np.linspace(start= 50.0, stop= 100.0, num= 81)
 
     totalProps = len(semiMajorVals) * len(eccVals) * len(incVals)
     currentProps = 0
 
     # Initializes array of average orbital values. 
     orbitAverages = np.empty((len(semiMajorVals), len(incVals), len(eccVals)))
-
 
     # Initializes current run directories.
     runDir = dataDir + f"run_num_{runCount}/"
@@ -132,82 +183,110 @@ if __name__ == "__main__":
         # Defines initial time as seconds since J2000. 
         propStartTime = tudatDate.epoch()
 
-        # Creates environment bodies. 
-        bodies = create_bodies(
-            sc_mass= scMass,
-            initial_att= np.eye(3),
-            rotation= True,
-            starting_time= propStartTime,
-            time_step= timeStep
-        )
+        # Build all argument combinations.
+        all_args = [
+            (ecc, inc, sma, propDurationTime, timeStep, propStartTime,
+             tumblingPowers, propagationDir, scMass)
+            for ecc in eccVals
+            for inc in incVals
+            for sma in semiMajorVals
+        ]
 
-        # TODO: Should be skipped for now, this defines attitude behavior if needed.
-        bodies = create_rotational_settings(
-            bodies= bodies,
-            time_step= timeStep
-        )
+        # Run propagations in parallel.
+        max_workers = os.cpu_count() - 1  # uses all but 1 cpu cores
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(single_orbit, args): args for args in all_args}
+            for future in as_completed(futures):
+                ecc, inc, sma, orbitAvg = future.result()
+                # Map back to indices.
+                i = list(eccVals).index(ecc)
+                j = list(incVals).index(inc)
+                k = list(semiMajorVals).index(sma)
+                orbitAverages[k, j, i] = orbitAvg
+                currentProps += 1
+                print(f"Completed propagation {currentProps} out of {totalProps}.")
 
-
+        # Dump orbital averages to csv files.
         for i, eccentricity in enumerate(eccVals):
-            for j,inclination in enumerate(incVals):
-                for k,semiMajorAxis in enumerate(semiMajorVals):
-                    # Progress indicator. 
-                    currentProps += 1
-
-                    # Defines initial keplerian orbital elements. 
-                    stateStartKep = np.array([
-                        semiMajorAxis,          # Semi-major axis [m]
-                        eccentricity,           # eccentricity 
-                        inclination,            # Inclination [rads]. Degrees in ().
-                        np.deg2rad(0),          # arg of periapsis [rads]
-                        np.deg2rad(0),          # longitude of ascending node [rads]
-                        np.deg2rad(0),          # true anomaly [rads]
-                    ])
-
-                    # Checks if an .npz file with propagation data for a given orbit has already been saved
-                    # assumes only eccentricity, inclination, and semi major axis are varying
-                    propagation_file = propagationDir + f"ecc_{eccentricity}_inc_{inclination}_a_{semiMajorAxis}.npz"
-
-                    if os.path.exists(propagation_file):
-                        # Propagation found - load relevant arrays
-                        print(f"Previous data found for propagation {currentProps} out of {totalProps}.")
-                        propagation_data = np.load(propagation_file)
-                        stateArr = propagation_data["stateArr"]
-                        dependentArr = propagation_data["dependentArr"]
-
-                    else:
-                        # No previous propagation data for that orbit is found so:
-                        print(f"Running propagation {currentProps} out of {totalProps}.")
-                        # Propagates orbit
-                        stateHistory, dependentHistory, stateArr, dependentArr = \
-                            propagate_orbit(
-                                propDurationTime= propDurationTime,
-                                timeStep= timeStep,
-                                stateStartKep= stateStartKep,
-                                propStartTime= propStartTime,
-                                bodies= bodies
-                        )
-                        #  Saves .npz file with propagation data for a given orbit
-                        #  assumes only eccentricity, inclination, and semi major axis are varying
-                        np.savez(propagation_file, stateArr=stateArr, dependentArr=dependentArr)
-                    
-                    # Returns orbit average. 
-                    # TODO: This should be made in such a way that power 
-                    # averages can be re-calculated from a saved set of orbital
-                    # calculations. 
-                    orbitAvg = orbit_average(
-                        stateArr= stateArr,
-                        dependentArr= dependentArr, 
-                        tumblingPowers= tumblingPowers,
-                        tumblingCheck= True,
-                    )
-
-                    # Saves orbit average. 
-                    orbitAverages[k,j,i] = orbitAvg
-
-            # Dumps orbital averages to csv file.
             filename = valuesDir + f"orbit_avg_eccentricity{eccentricity}.csv"
-            np.savetxt(filename, orbitAverages[:,:,i], delimiter= ",")
+            np.savetxt(filename, orbitAverages[:, :, i], delimiter=",")
+
+
+        ################# PREVIOUS NO MULTI THREADING #############
+
+        # # Creates environment bodies.
+        # bodies = create_bodies(
+        #     sc_mass= scMass,
+        #     initial_att= np.eye(3),
+        #     rotation= True,
+        #     starting_time= propStartTime,
+        #     time_step= timeStep
+        # )
+        #
+        # # TODO: Should be skipped for now, this defines attitude behavior if needed.
+        # bodies = create_rotational_settings(
+        #     bodies= bodies,
+        #     time_step= timeStep
+        # )
+        #
+        #
+        # for i, eccentricity in enumerate(eccVals):
+        #     for j,inclination in enumerate(incVals):
+        #         for k,semiMajorAxis in enumerate(semiMajorVals):
+        #             # Progress indicator.
+        #             currentProps += 1
+        #
+        #             # Defines initial keplerian orbital elements.
+        #             stateStartKep = np.array([
+        #                 semiMajorAxis,          # Semi-major axis [m]
+        #                 eccentricity,           # eccentricity
+        #                 inclination,            # Inclination [rads]. Degrees in ().
+        #                 np.deg2rad(0),          # arg of periapsis [rads]
+        #                 np.deg2rad(0),          # longitude of ascending node [rads]
+        #                 np.deg2rad(0),          # true anomaly [rads]
+        #             ])
+        #
+        #             # Checks if an .npz file with propagation data for a given orbit has already been saved
+        #             # assumes only eccentricity, inclination, and semi major axis are varying
+        #             propagation_file = propagationDir + f"ecc_{eccentricity}_inc_{inclination}_a_{semiMajorAxis}.npz"
+        #
+        #             if os.path.exists(propagation_file):
+        #                 # Propagation found - load relevant arrays
+        #                 print(f"Previous data found for propagation {currentProps} out of {totalProps}.")
+        #                 propagation_data = np.load(propagation_file)
+        #                 stateArr = propagation_data["stateArr"]
+        #                 dependentArr = propagation_data["dependentArr"]
+        #
+        #             else:
+        #                 # No previous propagation data for that orbit is found so:
+        #                 print(f"Running propagation {currentProps} out of {totalProps}.")
+        #                 # Propagates orbit
+        #                 stateHistory, dependentHistory, stateArr, dependentArr = \
+        #                     propagate_orbit(
+        #                         propDurationTime= propDurationTime,
+        #                         timeStep= timeStep,
+        #                         stateStartKep= stateStartKep,
+        #                         propStartTime= propStartTime,
+        #                         bodies= bodies
+        #                 )
+        #                 #  Saves .npz file with propagation data for a given orbit
+        #                 #  assumes only eccentricity, inclination, and semi major axis are varying
+        #                 np.savez(propagation_file, stateArr=stateArr, dependentArr=dependentArr)
+        #
+        #             # Returns orbit average
+        #             orbitAvg = orbit_average(
+        #                 stateArr= stateArr,
+        #                 dependentArr= dependentArr,
+        #                 tumblingPowers= tumblingPowers,
+        #                 tumblingCheck= True,
+        #             )
+        #
+        #             # Saves orbit average.
+        #             orbitAverages[k,j,i] = orbitAvg
+        #
+        #     # Dumps orbital averages to csv file.
+        #     filename = valuesDir + f"orbit_avg_eccentricity{eccentricity}.csv"
+        #     np.savetxt(filename, orbitAverages[:,:,i], delimiter= ",")
 
     ### Plots power average data.
     if plotAvgs := True:
@@ -216,7 +295,7 @@ if __name__ == "__main__":
             incVals= incVals,
             semiMajorVals= semiMajorVals,
             dataDir= dataDir,
-            runCount= 10,
+            runCount= runCount,
             showUncompliant= False,
             powerReq= 2.52
         )
@@ -387,12 +466,3 @@ if __name__ == "__main__":
         fig.tight_layout()
 
         plt.show()
-    
-
-
-
-
-
-
-
-    
