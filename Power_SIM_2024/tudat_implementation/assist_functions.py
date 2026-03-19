@@ -58,20 +58,27 @@ def plot_average_heatmap(
         else:
             im = ax.imshow(data/powerReq * 100, vmin= 100, alpha= alphaArr)
 
-        # Creates xticks for semiMajor. Assigns every third an empty space to make it more readable.
-        yTicks = np.array(semiMajorVals*1e-3, dtype=str)       # km
-        yTicks[1::2] = ""
-        ax.set_yticks(range(len(yTicks)), labels=yTicks,
+        # Step defines every how many values (of semiMajor or incVals) to display a tick on the plot
+        step_semiMajor = 4  # adjust if needed
+        step_incVals = 8  # adjust if needed
+
+        yTicks = np.array(semiMajorVals * 1e-3, dtype=str)  # km
+        yTicks[:] = ""  # blank everything
+        yTicks[::step_semiMajor] = np.array(semiMajorVals[::step_semiMajor] * 1e-3, dtype=str)  # km
+        ax.set_yticks(range(len(yTicks))[::int(step_semiMajor/2)], labels=yTicks[::int(step_semiMajor/2)],
                       rotation=45, ha="right", rotation_mode="anchor")
-        # Creates xticks for inclination. Assigns every third an empty space to make it more readable.
+
+        # Creates xticks for inclination. Same step used as for semiMajor
         xTicks = np.array(np.round(incVals, decimals=3), dtype=str)
-        xTicks[1::2] = ""
-        ax.set_xticks(range(len(xTicks)), labels=xTicks,
+        xTicks[:] = ""  # blank everything
+        xTicks[::step_incVals] = np.array(np.round(incVals[::step_incVals], decimals=3), dtype=str)
+        ax.set_xticks(range(len(xTicks))[::int(step_incVals/2)], labels=xTicks[::int(step_incVals/2)],
                       rotation=45, ha="right", rotation_mode="anchor")
 
         # Axis labels
         ax.set_xlabel(r"Inclination [º]")
         ax.set_ylabel(r"Semi Major Axis [km]")
+        ax.set_aspect('auto')
 
         # Create colorbar
         cbar = ax.figure.colorbar(im, ax=ax)

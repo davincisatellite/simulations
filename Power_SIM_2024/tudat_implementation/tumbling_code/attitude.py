@@ -18,11 +18,8 @@ def get_quaternion(rot_vec, angle):
     return np.array([q_0, q_1, q_2, q_3])
 
 
-# TODO: Having the uniform distribution inside this function instead of the 
-# main random quaternion generator might introduce some weird statistical issues. 
-# Revise this function. 
 def random_quaternion():
-    """Generate a random unit quaternion."""
+    """Generate a random unit quaternion - seed defined in main.py."""
     u1, u2, u3 = np.random.uniform(0, 1, 3)
     q0 = np.sqrt(1 - u1) * np.sin(2 * np.pi * u2)
     q1 = np.sqrt(1 - u1) * np.cos(2 * np.pi * u2)
