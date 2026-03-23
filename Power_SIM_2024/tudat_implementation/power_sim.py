@@ -128,12 +128,15 @@ def orbit_average(
 
     # Imports true anomaly values. 
     trueAnomaly = dependentArr[:,-1] * 180/np.pi
+    arg_Perigee = dependentArr[:,-3] * 180/np.pi
 
-    # Finds indices close to 360º within a margin (1.5º)
+    # Finds indices close to 360º within a margin
     # TODO: This method of finding the "End" of an orbit is still really iffy.
     # Improve. 
-    indx = np.argwhere(np.abs(trueAnomaly - 360) < 1.5)
-
+    indx = np.argwhere(np.abs((trueAnomaly+arg_Perigee) - 360) < 3)
+    if indx.size == 0:
+        print('bad')
+        print(trueAnomaly+arg_Perigee)
     # Calculates average of power production through orbit considering the 
     # last index in the array. Should ensure same number of orbits considered
     # for all averages. 

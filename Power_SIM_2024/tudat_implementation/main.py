@@ -23,7 +23,7 @@ from modes_conditions import *
 from datetime import datetime
 
 # Forces re-propagation of values.
-forceProp = False
+forceProp = True
 
 def single_orbit(args):
     """Worker function for a single orbit propagation."""
@@ -58,6 +58,8 @@ def single_orbit(args):
         _, _, stateArr, dependentArr = propagate_orbit(
             propDurationTime=propDurationTime,
             timeStep=timeStep,
+            # Keplerian: semi-major axis, eccentricity, inclination,
+            # argument of periapsis, longitude of the ascending node, true anomaly
             stateStartKep=np.array([
                 semiMajorAxis, eccentricity, np.deg2rad(inclination),
                 np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
@@ -223,7 +225,7 @@ if __name__ == "__main__":
             semiMajorVals= semiMajorVals,
             dataDir= dataDir,
             runCount= runCount,
-            showUncompliant= False,
+            showUncompliant= True,
             powerReq= 2.52
         )
 
