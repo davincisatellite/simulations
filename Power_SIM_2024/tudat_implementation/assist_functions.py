@@ -62,13 +62,13 @@ def plot_average_heatmap(
         step_semiMajor = 4  # adjust if needed
         step_incVals = 8  # adjust if needed
 
-        yTicks = np.array(semiMajorVals * 1e-3, dtype=str)  # km
+        yTicks = np.array(semiMajorVals * 1e-3 - 6371, dtype=str)  # km - mean orbital altitude instead of sma
         yTicks[:] = ""  # blank everything
-        yTicks[::step_semiMajor] = np.array(semiMajorVals[::step_semiMajor] * 1e-3, dtype=str)  # km
+        yTicks[::step_semiMajor] = np.array(semiMajorVals[::step_semiMajor] * 1e-3 - 6371, dtype=str)  # km
         ax.set_yticks(range(len(yTicks))[::int(step_semiMajor/2)], labels=yTicks[::int(step_semiMajor/2)],
                       rotation=45, ha="right", rotation_mode="anchor")
 
-        # Creates xticks for inclination. Same step used as for semiMajor
+        # Creates xticks for inclination. Different step than for altitude
         xTicks = np.array(np.round(incVals, decimals=3), dtype=str)
         xTicks[:] = ""  # blank everything
         xTicks[::step_incVals] = np.array(np.round(incVals[::step_incVals], decimals=3), dtype=str)
@@ -77,7 +77,7 @@ def plot_average_heatmap(
 
         # Axis labels
         ax.set_xlabel(r"Inclination [º]")
-        ax.set_ylabel(r"Semi Major Axis [km]")
+        ax.set_ylabel(r"Mean Orbital Altitude [km]")
         ax.set_aspect('auto')
 
         # Create colorbar

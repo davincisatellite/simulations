@@ -125,6 +125,7 @@ def orbit_average(
 
     # Uses shadow array to get final power production through orbit. 
     powerSolar = powerSolar * dependentArr[:,1]
+    shadow_array = dependentArr[:, 1]
 
     # Imports true anomaly values. 
     trueAnomaly = dependentArr[:,-1] * 180/np.pi
@@ -141,8 +142,9 @@ def orbit_average(
     # last index in the array. Should ensure same number of orbits considered
     # for all averages. 
     orbitAvg = np.average(powerSolar[:indx[-1,0]])
+    shadowAvg = np.average(shadow_array[:indx[-1,0]])
 
-    return orbitAvg
+    return orbitAvg, shadowAvg
 
 def battery_sim(
         dataDir: str,

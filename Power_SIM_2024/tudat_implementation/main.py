@@ -23,17 +23,17 @@ from modes_conditions import *
 from datetime import datetime
 
 # Forces re-propagation of values.
-forceProp = True
+forceProp = False
 
 def single_orbit(args):
     """Worker function for a single orbit propagation."""
     (eccentricity, inclination, semiMajorAxis,
      propDurationTime, timeStep, propStartTime,
-     tumblingPowers, propagationDir, scMass) = args
+     tumblingPowers, propagationDir, scMass, raan) = args
 
     # Checks if an .npz file with propagation data for a given orbit has already been saved
     # assumes only eccentricity, inclination, and semi major axis are varying
-    propagation_file = propagationDir + f"ecc_{eccentricity}_inc_{inclination}_a_{semiMajorAxis}.npz"
+    propagation_file = propagationDir + f"ecc_{eccentricity}_inc_{inclination}_a_{semiMajorAxis}_raan_{raan}.npz"
 
     if os.path.exists(propagation_file) and not(forceProp):
         # If previously ran, just take from saved data
@@ -59,24 +59,24 @@ def single_orbit(args):
             propDurationTime=propDurationTime,
             timeStep=timeStep,
             # Keplerian: semi-major axis, eccentricity, inclination,
-            # argument of periapsis, longitude of the ascending node, true anomaly
+            # argument of periapsis, longitude of the ascending node (RAAN), true anomaly
             stateStartKep=np.array([
                 semiMajorAxis, eccentricity, np.deg2rad(inclination),
-                np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
+                np.deg2rad(0), np.deg2rad(raan), np.deg2rad(0)
             ]),
             propStartTime=propStartTime,
             bodies=bodies_local
         )
         np.savez(propagation_file, stateArr=stateArr, dependentArr=dependentArr)
 
-    orbitAvg = orbit_average(
+    orbitAvg, shadowAvg = orbit_average(
         stateArr=stateArr,
         dependentArr=dependentArr,
         tumblingPowers=tumblingPowers,
         tumblingCheck=True,
     )
 
-    return (eccentricity, inclination, semiMajorAxis, orbitAvg)
+    return (eccentricity, inclination, semiMajorAxis, orbitAvg, shadowAvg)
 
 if __name__ == "__main__":
     # Reproducibility of the power tumbling averages - quarternions are randomly generated
@@ -106,8 +106,8 @@ if __name__ == "__main__":
     #               4 * solar_cell, 2 * solar_cell, 2 * solar_cell]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solarArray = [4*solar_cell, 4*solar_cell, 0*solar_cell,
-                   4*solar_cell, 2*solar_cell, 0*solar_cell]
+    solarArray = [4*solar_cell, 4*solar_cell, 2*solar_cell,
+                   4*solar_cell, 2*solar_cell, 2*solar_cell]
     
     # Total tumbling power based on the sphere of quaternions method in
     # tumbling_code. 
@@ -140,16 +140,19 @@ if __name__ == "__main__":
     # Creates times array.
     times = np.arange(start= 0.0, stop= propDurationTime*60**2, step= timeStep)
 
-    # Simulation range for orbital power averages. 
-    semiMajorVals = np.linspace(start= 6720e3, stop= 6920e3, num= 21)
+    # Simulation range for orbital power averages.
+    # Avg Earth radius: 6371 km - we are operational down to 180 km altitude so approx 6550 km semi-major axis
+    semiMajorVals = np.linspace(start= 6551e3, stop= 6951e3, num= 21) # before it was up to 6920 km
     eccVals = np.linspace(start= 0.0, stop= 0.015, num= 2)
     incVals = np.linspace(start= 50.0, stop= 140.0, num= 81)
+    raan = 90  # input here in deg - 0 for best-case illumination, 90 for worst-case
 
     totalProps = len(semiMajorVals) * len(eccVals) * len(incVals)
     currentProps = 0
 
     # Initializes array of average orbital values. 
     orbitAverages = np.empty((len(semiMajorVals), len(incVals), len(eccVals)))
+    shadowAverages = np.empty((len(semiMajorVals), len(incVals), len(eccVals)))
 
     # Initializes current run directories.
     runDir = dataDir + f"run_num_{runCount}/"
@@ -191,7 +194,7 @@ if __name__ == "__main__":
         # Build all argument combinations.
         all_args = [
             (ecc, inc, sma, propDurationTime, timeStep, propStartTime,
-             tumblingPowers, propagationDir, scMass)
+             tumblingPowers, propagationDir, scMass, raan)
             for ecc in eccVals
             for inc in incVals
             for sma in semiMajorVals
@@ -202,15 +205,20 @@ if __name__ == "__main__":
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(single_orbit, args): args for args in all_args}
             for future in as_completed(futures):
-                ecc, inc, sma, orbitAvg = future.result()
+                ecc, inc, sma, orbitAvg, shadowAvg = future.result()
                 # Map back to indices.
                 i = list(eccVals).index(ecc)
                 j = list(incVals).index(inc)
                 k = list(semiMajorVals).index(sma)
 
                 orbitAverages[k, j, i] = orbitAvg
+                shadowAverages[k, j, i] = shadowAvg
                 currentProps += 1
                 print(f"Completed propagation {currentProps} out of {totalProps}.")
+
+        # The longest orbit fraction the satellite is in shadow - smallest shadowAverage
+        min_shadow = np.min(shadowAverages)
+        print(f"The longest the satellite is in shadow (as fraction of orbit): {1-min_shadow}")
 
         # Dump orbital averages to csv files.
         for i, eccentricity in enumerate(eccVals):
