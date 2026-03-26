@@ -137,7 +137,11 @@ def orbit_average(
     indx = np.argwhere(np.abs((trueAnomaly+arg_Perigee) - 360) < 3)
     if indx.size == 0:
         print('bad')
-        print(trueAnomaly+arg_Perigee)
+        # if the argument of latitude doesnt work, try wrapping it
+        argLatitude_wrapped = np.mod(trueAnomaly+arg_Perigee, 360)
+        indx = np.argwhere(np.abs(argLatitude_wrapped - 360) < 3)
+        if indx.size != 0:
+            print("fixed!")
     # Calculates average of power production through orbit considering the 
     # last index in the array. Should ensure same number of orbits considered
     # for all averages. 
