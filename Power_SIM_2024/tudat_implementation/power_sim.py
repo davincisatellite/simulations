@@ -150,6 +150,59 @@ def orbit_average(
 
     return orbitAvg, shadowAvg
 
+def battery_analysis(
+        battMax: float, # battMax is the total capacity of all the batteries! 
+        powerReq: float,
+        dependentArr: npt.NDArray,
+        tumblingPowers: npt.NDArray, 
+):
+    ### Battery analysis starts here
+    powerSolar = tumblingPowers
+    powerSolar = powerSolar * dependentArr[:,1]
+
+    # Total power generated in the orbit
+    energySolar = np.trapz(powerSolar, dependentArr[:, 0]) / 3600  # W*h
+
+    # Create time-power array with time and power columns
+    times = dependentArr[:, 0]
+    timePower = np.column_stack((times, powerSolar))
+
+    # Split timePower array based on power requirement
+    mask_insufficient = powerSolar < powerReq
+    insufficient_indices = np.where(mask_insufficient)[0]
+    
+    if len(insufficient_indices) > 0:
+        # Find where indices are not consecutive (meaning a break between eclipses)
+        split_points = np.where(np.diff(insufficient_indices) > 1)[0] + 1
+        
+        # Split into a list of arrays, each representing one continuous eclipse
+        eclipses = np.split(insufficient_indices, split_points)
+        
+        # Take the longest eclipse
+        longest_eclipse_indices = max(eclipses, key=len)
+        timePower_insufficient = timePower[longest_eclipse_indices]
+    else:
+        timePower_insufficient = np.array([])
+
+    # Calculate total time with insufficient power and energy deficit
+    if len(timePower_insufficient) > 0:
+        eclipseEnergy = np.trapz(powerReq - timePower_insufficient[:, 1], timePower_insufficient[:, 0]) / 3600  # W*h
+    else:
+        eclipseEnergy = 0
+    
+    # if len(timePower_sufficient) > 0:
+    #     producedEnergy = np.trapz(timePower_sufficient[:, 1], timePower_sufficient[:, 0])
+    # else:
+    #     producedEnergy = 0
+
+    # Check if battery capcity is greater that required Energy
+
+    if battMax >= eclipseEnergy:
+        return eclipseEnergy/battMax; 
+    else:
+        return None
+
+
 def battery_sim(
         dataDir: str,
         battStart: float,

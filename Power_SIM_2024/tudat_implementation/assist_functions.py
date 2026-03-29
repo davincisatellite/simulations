@@ -32,7 +32,7 @@ def plot_average_heatmap(
         semiMajorVals: npt.NDArray,
         dataDir: str,
         runCount: int,
-        powerReq: float= 4.0,
+        powerReq: float,
         showUncompliant: bool= False,
 ):
     valuesDir = dataDir + f"run_num_{runCount}/orbit_averages/"
@@ -111,6 +111,53 @@ def plot_average_heatmap(
         # Save as interactive HTML
         html_file = plotsDir + f"eccentricity{eccentricity}_orbitAvg.html"
         fig_html.write_html(html_file)
+
+def plot_dod_heatmap(
+        eccVals: npt.NDArray,
+        incVals: npt.NDArray,
+        semiMajorVals: npt.NDArray,
+        dataDir: str,
+        runCount: int,
+):
+    valuesDir = dataDir + f"run_num_{runCount}/orbit_averages/"
+    plotsDir = dataDir + f"run_num_{runCount}/plots/"
+
+    plt.rcParams.update({'font.size': 14})
+
+    for _, eccentricity in enumerate(eccVals):
+        # Reads data from saved csv files.
+        importDir = valuesDir + f"orbit_dod_eccentricity{eccentricity}.csv"
+        data = np.genfromtxt(importDir, delimiter=",")
+
+        fig, ax = plt.subplots()
+        im = ax.imshow(data * 100)
+
+        # Creates yticks for semiMajor. Assigns every other value as empty for readability.
+        yTicks = np.array(semiMajorVals * 1e-3, dtype=str)       # km
+        yTicks[1::2] = ""
+        ax.set_yticks(range(len(yTicks)), labels=yTicks,
+                      rotation=45, ha="right", rotation_mode="anchor")
+
+        # Creates xticks for inclination. Assigns every other value as empty for readability.
+        xTicks = np.array(np.round(incVals, decimals=3), dtype=str)
+        xTicks[1::2] = ""
+        ax.set_xticks(range(len(xTicks)), labels=xTicks,
+                      rotation=45, ha="right", rotation_mode="anchor")
+
+        # Axis labels
+        ax.set_xlabel(r"Inclination [º]")
+        ax.set_ylabel(r"Semi Major Axis [km]")
+
+        # Create colorbar
+        cbar = ax.figure.colorbar(im, ax=ax)
+        cbar.ax.set_ylabel("Depth of Discharge [%]", rotation=-90, va="bottom")
+
+        fig.suptitle(f"Eccentricity {eccentricity}")
+        fig.tight_layout()
+
+        fig.savefig(plotsDir + f"eccentricity{eccentricity}_DoD.png")
+        plt.show()  # Display the plot
+        plt.close(fig)  # Close the figure to free memory
 
 def plot_battery_charge(
         dataDir: str,

@@ -27,9 +27,11 @@ forceProp = False
 
 def single_orbit(args):
     """Worker function for a single orbit propagation."""
+    from power_sim import battery_analysis
+    
     (eccentricity, inclination, semiMajorAxis,
      propDurationTime, timeStep, propStartTime,
-     tumblingPowers, propagationDir, scMass, raan) = args
+     tumblingPowers, propagationDir, scMass, raan, battMax, powerReq) = args
 
     # Checks if an .npz file with propagation data for a given orbit has already been saved
     # assumes only eccentricity, inclination, and semi major axis are varying
@@ -76,7 +78,14 @@ def single_orbit(args):
         tumblingCheck=True,
     )
 
-    return (eccentricity, inclination, semiMajorAxis, orbitAvg, shadowAvg)
+    DoD = battery_analysis(
+        battMax=battMax,
+        powerReq=powerReq,
+        dependentArr=dependentArr,
+        tumblingPowers=tumblingPowers
+    )
+
+    return (eccentricity, inclination, semiMajorAxis, orbitAvg, shadowAvg, DoD)
 
 if __name__ == "__main__":
     # Reproducibility of the power tumbling averages - quarternions are randomly generated
@@ -100,6 +109,8 @@ if __name__ == "__main__":
     ### Spacecraft properties definition. 
     # Defines spacecraft mass in [kg]. 
     scMass = 2.8
+
+    powerReq = 2.7
 
     # Creates solar array distribution as: [+X, -X, +Y, -Y, +Z, -Z]
     # baseSolarArray = [4 * solar_cell, 4 * solar_cell, 4 * solar_cell,
@@ -153,6 +164,7 @@ if __name__ == "__main__":
     # Initializes array of average orbital values. 
     orbitAverages = np.empty((len(semiMajorVals), len(incVals), len(eccVals)))
     shadowAverages = np.empty((len(semiMajorVals), len(incVals), len(eccVals)))
+    DoDAverages = np.empty((len(semiMajorVals), len(incVals), len(eccVals)))
 
     # Initializes current run directories.
     runDir = dataDir + f"run_num_{runCount}/"
@@ -194,7 +206,7 @@ if __name__ == "__main__":
         # Build all argument combinations.
         all_args = [
             (ecc, inc, sma, propDurationTime, timeStep, propStartTime,
-             tumblingPowers, propagationDir, scMass, raan)
+             tumblingPowers, propagationDir, scMass, raan, battMax, powerReq)
             for ecc in eccVals
             for inc in incVals
             for sma in semiMajorVals
@@ -205,7 +217,7 @@ if __name__ == "__main__":
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(single_orbit, args): args for args in all_args}
             for future in as_completed(futures):
-                ecc, inc, sma, orbitAvg, shadowAvg = future.result()
+                ecc, inc, sma, orbitAvg, shadowAvg, DoD = future.result()
                 # Map back to indices.
                 i = list(eccVals).index(ecc)
                 j = list(incVals).index(inc)
@@ -213,6 +225,7 @@ if __name__ == "__main__":
 
                 orbitAverages[k, j, i] = orbitAvg
                 shadowAverages[k, j, i] = shadowAvg
+                DoDAverages[k, j, i] = DoD
                 currentProps += 1
                 print(f"Completed propagation {currentProps} out of {totalProps}.")
 
@@ -225,6 +238,11 @@ if __name__ == "__main__":
             filename = valuesDir + f"orbit_avg_eccentricity{eccentricity}.csv"
             np.savetxt(filename, orbitAverages[:, :, i], delimiter=",")
 
+        # Dump depth of discharge averages to csv files.
+        for i, eccentricity in enumerate(eccVals):
+            filename = valuesDir + f"orbit_dod_eccentricity{eccentricity}.csv"
+            np.savetxt(filename, DoDAverages[:, :, i], delimiter=",")
+
     ### Plots power average data.
     if plotAvgs := True:
         plot_average_heatmap(
@@ -234,7 +252,18 @@ if __name__ == "__main__":
             dataDir= dataDir,
             runCount= runCount,
             showUncompliant= True,
-            powerReq= 2.52
+            powerReq= powerReq
+        )
+
+
+    ### Plots depth of discharge data.
+    if plotDoD := True:
+        plot_dod_heatmap(
+            eccVals= eccVals,
+            incVals= incVals,
+            semiMajorVals= semiMajorVals,
+            dataDir= dataDir,
+            runCount= runCount,
         )
 
     ##### Battery charge operations #####
