@@ -45,18 +45,14 @@ def plot_average_heatmap(
         importDir = valuesDir + f"orbit_avg_eccentricity{eccentricity}.csv"
         data = np.genfromtxt(importDir, delimiter=",")
 
-        # Creates array of ratio to required power.
-        alphaArr = data/powerReq
-        alphaArr[alphaArr < 1.0] = 0
-        alphaArr[alphaArr >= 1.0] = 1
+        # # Creates array of ratio to required power.
+        # alphaArr = data/powerReq
+        # alphaArr[alphaArr < 1.0] = 0
+        # alphaArr[alphaArr >= 1.0] = 1
 
         fig, ax = plt.subplots()
 
-        # Checks whether we want to see uncompliant (<100% of power requirement) results.
-        if showUncompliant:
-            im = ax.imshow(data / powerReq * 100)
-        else:
-            im = ax.imshow(data/powerReq * 100, vmin= 100, alpha= alphaArr)
+        im = ax.imshow(data, vmin=2.2, vmax=3.1, cmap="gist_rainbow")
 
         # Step defines every how many values (of semiMajor or incVals) to display a tick on the plot
         step_semiMajor = 4  # adjust if needed
@@ -82,7 +78,7 @@ def plot_average_heatmap(
 
         # Create colorbar
         cbar = ax.figure.colorbar(im, ax=ax)
-        cbar.ax.set_ylabel(f"% of {powerReq}W Average", rotation=-90, va="bottom")
+        cbar.ax.set_ylabel(f"Average power per orbit [W]", rotation=-90, va="bottom")
 
         fig.suptitle(f"Eccentricity {eccentricity}")
 
@@ -90,11 +86,7 @@ def plot_average_heatmap(
 
         fig.savefig(plotsDir + f"eccentricity{eccentricity}_orbitAvg.png")
 
-        # Make interactive html
-        if not showUncompliant:
-            data_plot = np.where(alphaArr >= 1.0, data / powerReq * 100, np.nan)
-        else:
-            data_plot = data / powerReq * 100
+        data_plot = data
 
         fig_html = px.imshow(
             data_plot,
@@ -156,7 +148,7 @@ def plot_dod_heatmap(
         fig.tight_layout()
 
         fig.savefig(plotsDir + f"eccentricity{eccentricity}_DoD.png")
-        plt.show()  # Display the plot
+        # plt.show()  # Display the plot
         plt.close(fig)  # Close the figure to free memory
 
 def plot_battery_charge(

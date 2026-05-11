@@ -74,8 +74,7 @@ def single_orbit(args):
     orbitAvg, shadowAvg = orbit_average(
         stateArr=stateArr,
         dependentArr=dependentArr,
-        tumblingPowers=tumblingPowers,
-        tumblingCheck=True,
+        tumblingPowers=tumblingPowers
     )
 
     DoD = battery_analysis(
@@ -104,7 +103,7 @@ if __name__ == "__main__":
 
     # Check value for using tumbling for power calculations instead of specific
     # attitude power. 
-    tumblingCheck = True
+    tumblingCheck = False
 
     ### Spacecraft properties definition. 
     # Defines spacecraft mass in [kg]. 
@@ -117,7 +116,7 @@ if __name__ == "__main__":
     #               4 * solar_cell, 2 * solar_cell, 2 * solar_cell]
     # TODO: Better estimate for maximum power production for each cell.
     solar_cell = 1.08 # [Watt]
-    solarArray = [4*solar_cell, 4*solar_cell, 2*solar_cell,
+    solarArray = [4*solar_cell, 4*solar_cell, 4*solar_cell,
                    4*solar_cell, 2*solar_cell, 2*solar_cell]
     
     # Total tumbling power based on the sphere of quaternions method in
@@ -128,10 +127,14 @@ if __name__ == "__main__":
     # run of the program. numVals defines the number of values produced, might 
     # be helpful to simulate with more values to see what the variation is. 
     # But that's some statistics stuff that I don't want to do atm.  -Tom.
-    if tumblingCheck: 
+
+    ### only do tumbling check if you want to use this method, otheriwse by default use nicolo's
+    if tumblingCheck:
         tumblingPowers = tumbling_powers(solarArray= solarArray, numVals= 1)
-        # TODO: Decide whether to do this or a set of tests for different 
-        # tumbling powers. 
+        # TODO: Decide whether to do this or a set of tests for different tumbling powers.
+        print(tumblingPowers)
+    else:
+        tumblingPowers = [4.342]  # no Z no Y is 3.860, nominal is 4.829, no Y is 4.347, no Z is 4.342
     
     # Battery capacity. [W*h]
     # Taken from iEPS Type A,B,C datasheet. 
@@ -251,7 +254,7 @@ if __name__ == "__main__":
             semiMajorVals= semiMajorVals,
             dataDir= dataDir,
             runCount= runCount,
-            showUncompliant= True,
+            showUncompliant= False,
             powerReq= powerReq
         )
 
