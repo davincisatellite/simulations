@@ -75,7 +75,8 @@ def dep_variables():
         dependent_variable.keplerian_state("DVS", "Earth"),
         dependent_variable.latitude("DVS", "Earth"),
         dependent_variable.longitude("DVS", "Earth"),
-        dependent_variable.altitude("DVS", "Earth")
+        dependent_variable.altitude("DVS", "Earth"),
+        dependent_variable.central_body_fixed_cartesian_position("DVS", "Earth")
     ]
     return dependent_variables_to_save
 
@@ -83,7 +84,7 @@ def dep_variables():
 def integrator(simulation_end_epoch, accelerations, initial_state, simulation_start_epoch, dependent_variables_to_save):
 
     termination_condition = propagation_setup.propagator.time_termination(simulation_end_epoch)
-    fixed_step_size = 10.0
+    fixed_step_size = 5.0
     integrator_settings = propagation_setup.integrator.runge_kutta_fixed_step(fixed_step_size, coefficient_set=propagation_setup.integrator.CoefficientSets.rk_4)
 
     central_bodies = ['Earth']
@@ -199,6 +200,59 @@ def run_analysis(keplerian_state, reference_area, drag_coefficient, radiation_pr
     latitude = dep_var_dict.asarray(dependent_variable.latitude("DVS", "Earth"))
     longitude = dep_var_dict.asarray(dependent_variable.longitude("DVS", "Earth"))
     altitude = dep_var_dict.asarray(dependent_variable.altitude("DVS", "Earth"))
+    earth_fixed_cartesian_position_DVS = dep_var_dict.asarray(dependent_variable.central_body_fixed_cartesian_position("DVS", "Earth"))
+
+    ########## VISIBILITY ########
+    # observer - delft
+    observer_latitude = np.deg2rad(52.0)
+    observer_longitude = np.deg2rad(4.4)
+    observer_altitude = 0.0
+
+    earth_radius = bodies.get("Earth").shape_model.average_radius
+
+    cartesian_observer = element_conversion.spherical_to_cartesian_elementwise(
+        radial_distance=earth_radius + observer_altitude,
+        latitude=observer_latitude,
+        longitude=observer_longitude,
+        speed=0,
+        flight_path_angle=0,
+        heading_angle=0,
+    )[:3]
+
+    r_obs_to_sat = earth_fixed_cartesian_position_DVS - cartesian_observer
+
+    zenith_at_observer = cartesian_observer / np.linalg.norm(cartesian_observer)
+
+    cos_angle = np.sum(r_obs_to_sat * zenith_at_observer, axis=1) / np.linalg.norm(r_obs_to_sat, axis=1)
+
+    cos_angle = np.clip(cos_angle, -1.0, 1.0)
+
+    zenith_angle_from_observer = np.degrees(np.arccos(cos_angle))
+
+    # set visibility to 1 if the angle from zenith at observer is equal or lower than 60 deg, otherwise 0
+    visibility = (zenith_angle_from_observer <= 75.0).astype(int)
+
+    print(visibility)
+
+    # extract passes duration
+    time = states_array[:, 0]
+
+    diff = np.diff(visibility)
+
+    start_idx = np.where(diff == 1)[0] + 1
+    end_idx = np.where(diff == -1)[0] + 1
+
+    # handle edge cases
+    if visibility[0] == 1:
+        start_idx = np.insert(start_idx, 0, 0)
+    if visibility[-1] == 1:
+        end_idx = np.append(end_idx, len(visibility) - 1)
+
+    start_times = time[start_idx]
+    end_times = time[end_idx]
+
+    durations = end_times - start_times
+
+    print("Durations of passes:", durations, "seconds")
 
     save_simulation_to_csv_pandas("ground_simulations_data.csv", states_array,  keplerian_state_array, latitude, longitude, altitude, sim_id, keplerian_state)
-
