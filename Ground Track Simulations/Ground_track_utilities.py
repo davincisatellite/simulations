@@ -208,7 +208,7 @@ def run_analysis(keplerian_state, reference_area, drag_coefficient, radiation_pr
     observer_longitude = np.deg2rad(4.4)
     observer_altitude = 0.0
 
-    earth_radius = bodies.get("Earth").shape_model.average_radius
+    earth_radius = bodies.get("Earth").shape_model.average_radius  # could be improved to account for diff radius at delft loc
 
     cartesian_observer = element_conversion.spherical_to_cartesian_elementwise(
         radial_distance=earth_radius + observer_altitude,
@@ -229,7 +229,8 @@ def run_analysis(keplerian_state, reference_area, drag_coefficient, radiation_pr
 
     zenith_angle_from_observer = np.degrees(np.arccos(cos_angle))
 
-    # set visibility to 1 if the angle from zenith at observer is equal or lower than 60 deg, otherwise 0
+    # set visibility to 1 if the angle from zenith at observer to sa is equal or lower than 75 deg, otherwise 0
+    # 75 is from chat
     visibility = (zenith_angle_from_observer <= 75.0).astype(int)
 
     print(visibility)
@@ -252,7 +253,9 @@ def run_analysis(keplerian_state, reference_area, drag_coefficient, radiation_pr
     end_times = time[end_idx]
 
     durations = end_times - start_times
+    avg_duration = np.mean(durations)
 
     print("Durations of passes:", durations, "seconds")
+    print("Mean duration of passes:", avg_duration, "seconds")
 
     save_simulation_to_csv_pandas("ground_simulations_data.csv", states_array,  keplerian_state_array, latitude, longitude, altitude, sim_id, keplerian_state)
